@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xjh.core.mapper.TaskMapper">
+    <resultMap id="BaseResultMap" type="com.xjh.common.po.PlanTaskPO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="type" column="type" javaType="com.xjh.common.enums.PlanTypeEnum"/>
+        <result property="timeLen" column="time_len"/>
+        <result property="userId" column="user_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="endTime" column="end_time"/>
+        <collection property="tasks" ofType="com.xjh.common.bean.Task" javaType="List">
+            <id property="id" column="id"/>
+            <result property="name" column="name"/>
+            <result property="userId" column="user_id"/>
+            <result property="content" column="content"/>
+            <result property="createTime" column="create_time"/>
+            <result property="planId" column="plan_id"/>
+            <result property="status" column="status" javaType="com.xjh.common.enums.TaskStatusEnum"/>
+        </collection>
+    </resultMap>
+
+    <resultMap id="JoinQueryResultMap" type="com.xjh.common.po.PlanTaskPO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="type" column="type" javaType="com.xjh.common.enums.PlanTypeEnum"/>
+        <result property="timeLen" column="time_len"/>
+        <result property="userId" column="user_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="endTime" column="end_time"/>
+        <collection property="tasks" ofType="com.xjh.common.bean.Task" javaType="List">
+            <id property="id" column="t_id"/>
+            <result property="name" column="t_name"/>
+            <result property="userId" column="t_user_id"/>
+            <result property="content" column="content"/>
+            <result property="createTime" column="t_create_time"/>
+            <result property="planId" column="plan_id"/>
+            <result property="status" column="status" javaType="com.xjh.common.enums.TaskStatusEnum"/>
+        </collection>
+    </resultMap>
+    <sql id="taskColumn">
+        name,user_id,content,create_time,plan_id,status
+    </sql>
+    <sql id="planTaskColumn">
+        p.id,p.name,p.type,p.time_len,p.user_id,p.create_time,p.end_time,
+        t.id as t_id,t.name as t_name,t.user_id as t_user_id,t.content,
+        t.create_time as t_create_time,t.plan_id,t.status
+    </sql>
+
+    <sql id="queryTaskVOPlan">
+        <where>
+            <if test="taskVO.pId != null">
+                and p.id=#{taskVO.pId}
+            </if>
+            <if test="taskVO.planName != null and taskVO.planName.length() > 0">
+                and p.name like CONCAT('%',#{taskVO.planName},'%')
+            </if>
+            <if test="taskVO.tId != null">
+                and t.id=#{taskVO.tId}
+            </if>
+            <if test="taskVO.status != null">
+                and t.status=#{taskVO.status}
+            </if>
+            <if test="taskVO.type != null">
+                and p.type=#{taskVO.type}
+            </if>
+            <if test="taskVO.queryTime != null and taskVO.queryTime.length()>0">
+                and date_format(p.create_time, '%Y-%m-%d') = #{taskVO.queryTime}
+            </if>
+            and p.user_id=#{taskVO.userId}
+        </where>
+    </sql>
+
+
+    <select id="queryAlivePlan" resultMap="JoinQueryResultMap">
+        select <include refid="planTaskColumn"/> from plan p,task t
+        <include refid="queryTaskVOPlan"/>
+        and p.id=t.plan_id
+        and (p.end_time>#{date} or p.end_time is null)
+    </select>
+
+    <select id="queryHistoryPlan" resultMap="JoinQueryResultMap">
+        select <include refid="planTaskColumn"/> from plan p,task t
+        <include refid="queryTaskVOPlan"/>
+        and p.id=t.plan_id
+        and p.end_time &lt; #{date}
+    </select>
+
+
+    <delete id="deleteTask">
+            delete from task
+            where plan_id =#{id}
+    </delete>
+
+    <delete id="deletePlanAndTask">
+        delete p,t from plan p left join task t
+        on  p.id = t.plan_id
+        where p.id=#{id}
+    </delete>
+
+    <insert id="insertPlan" parameterType="com.xjh.common.po.PlanTaskPO">
+        insert into plan(name,type,time_len,user_id,create_time,end_time)
+        values (#{name},#{type},#{timeLen},#{userId},#{createTime},#{endTime})
+        <selectKey keyProperty="id" resultType="int" order="AFTER">
+            SELECT LAST_INSERT_ID();
+        </selectKey>
+    </insert>
+
+    <insert id="insertTask">
+        insert into task(<include refid="taskColumn"/>)values
+        <!--item就是List里每一项的对象名，要用","分割每一条数据，最后要";"结尾-->
+        <foreach collection="list" item="task" separator="," close=";">
+            (#{task.name},#{task.userId},#{task.content},#{task.createTime},#{task.planId},#{task.status})
+        </foreach>
+    </insert>
+
+    <update id="updatePlan">
+        update plan
+        <set>
+            name =#{name},
+            type=#{type},
+<!--            <if test="timeLen != null and timeLen >0">-->
+            time_len=#{timeLen}
+<!--            </if>-->
+        </set>
+        where id=#{id}
+    </update>
+    <update id="updateStatus">
+        update task
+        set status=#{status}
+        where id=#{tId}
+    </update>
+
+
+
+
+
+
+<!--    <select id="getDataByTaskVo" resultMap="JoinQueryResultMap">-->
+<!--        select <include refid="planTaskColumn"/> from plan p,task t-->
+<!--        <include refid="queryTaskVOPlan"/>-->
+<!--        and p.id=t.plan_id-->
+<!--    </select>-->
+
+<!--    <select id="getCountByTaskVo" resultType="java.lang.Integer">-->
+<!--        select count(*) from plan p,task t-->
+<!--        <include refid="queryTaskVOPlan"/>-->
+<!--        and p.id=t.plan_id-->
+<!--    </select>-->
+</mapper>
