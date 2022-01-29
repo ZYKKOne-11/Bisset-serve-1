@@ -5,6 +5,8 @@
 #    url: jdbc:mysql://101.43.25.47:3306/serve_task?useUnicode=true&characterEncoding=utf-8&useSSL=false
 #    username: root
 #    password: Xjh@187acb1212
+server:
+  port: 8210
 
 mybatis:
   mapper-locations: classpath*:/mapper/*.xml

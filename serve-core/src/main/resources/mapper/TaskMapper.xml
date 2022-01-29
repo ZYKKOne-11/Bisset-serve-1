@@ -77,6 +77,7 @@
         <include refid="queryTaskVOPlan"/>
         and p.id=t.plan_id
         and (p.end_time>#{date} or p.end_time is null)
+        order by p.createTime desc
     </select>
 
     <select id="queryHistoryPlan" resultMap="JoinQueryResultMap">
@@ -84,6 +85,7 @@
         <include refid="queryTaskVOPlan"/>
         and p.id=t.plan_id
         and p.end_time &lt; #{date}
+        order by p.createTime desc
     </select>
 
 
@@ -123,7 +125,7 @@
             time_len=#{timeLen}
 <!--            </if>-->
         </set>
-        where id=#{id}
+        where id=#{id} and user_id = #{userId}
     </update>
     <update id="updateStatus">
         update task
