@@ -24,7 +24,7 @@ public enum CommonErrorCode {
     private Integer code;
     private String desc;
 
-    private CommonErrorCode(Integer code, String desc) {
+    CommonErrorCode(Integer code, String desc) {
         this.code = code;
         this.desc = desc;
     }

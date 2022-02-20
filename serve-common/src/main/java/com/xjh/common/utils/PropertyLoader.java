@@ -97,19 +97,24 @@ public class PropertyLoader {
         }
     }
 
-//    static {
-//        Properties properties = new Properties();
-//        properties.putAll(loadProperties("context.properties"));
-//        Try.run(() -> {
-//            properties.putAll(loadProperties("application.properties"));
-//        }).onFailure((e) -> {
-//            logger.warn("spring.profiles.active", e.getMessage());
-//        });
-//        Try.run(() -> {
-//            properties.putAll(loadProperties("healthcheck.properties"));
-//        }).onFailure((e) -> {
-//            logger.warn("healthcheck.properties", e.getMessage());
-//        });
-//        RESOURCE_BUNDLE = properties;
-//    }
+    static {
+        Properties properties = new Properties();
+        properties.putAll(loadProperties("context.properties"));
+        Try.run(() -> {
+            properties.putAll(loadProperties("application.properties"));
+        }).onFailure((e) -> {
+            logger.warn("spring.profiles.active", e.getMessage());
+        });
+        Try.run(() -> {
+            properties.putAll(loadProperties("healthcheck.properties"));
+        }).onFailure((e) -> {
+            logger.warn("healthcheck.properties", e.getMessage());
+        });
+        Try.run(() -> {
+            properties.putAll(loadProperties("db.properties"));
+        }).onFailure((e) -> {
+            logger.warn("db.properties", e.getMessage());
+        });
+        RESOURCE_BUNDLE = properties;
+    }
 }

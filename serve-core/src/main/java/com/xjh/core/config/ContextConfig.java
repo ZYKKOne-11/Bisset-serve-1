@@ -2,7 +2,12 @@ package com.xjh.core.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.github.pagehelper.PageHelper;
+import com.xjh.common.exception.CommonErrorCode;
+import com.xjh.common.exception.CommonException;
 import com.xjh.common.utils.PropertyLoader;
+import com.xjh.core.service.redis.ObjectRedisTemplate;
+import com.xjh.core.service.redis.RedisService;
+import com.xjh.core.service.redis.impl.RedisServiceImpl;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -16,6 +21,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.data.redis.connection.RedisPassword;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
@@ -76,6 +85,38 @@ public class ContextConfig {
     @Bean
     public SqlSessionTemplate sqlSessionTemplate(@Qualifier("sqlSessionFactory") SqlSessionFactory sqlSessionFactory) {
         return new SqlSessionTemplate(sqlSessionFactory, ExecutorType.SIMPLE);
+    }
+
+    @Bean
+    public JedisConnectionFactory jedisConnectionFactory() {
+        logger.info("==== jedis ConnectionFactory execute ====");
+        RedisStandaloneConfiguration standaloneConfig = new RedisStandaloneConfiguration();
+        standaloneConfig.setDatabase(PropertyLoader.getIntProperty("redis.dbIndex"));
+        standaloneConfig.setHostName(PropertyLoader.getProperty("redis.hostname"));
+        standaloneConfig.setPassword(RedisPassword.of(PropertyLoader.getProperty("redis.password")));
+        standaloneConfig.setPort(PropertyLoader.getIntProperty("redis.port"));
+        JedisConnectionFactory connectionFactory = new JedisConnectionFactory(standaloneConfig);
+        GenericObjectPoolConfig poolConfig = connectionFactory.getPoolConfig();
+        if (poolConfig == null) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "初始化 jedis ConnectionFactory 出错");
+        } else {
+            poolConfig.setMaxIdle(PropertyLoader.getIntProperty("redis.poolMaxIdle"));
+            poolConfig.setTestOnBorrow(PropertyLoader.getBooleanProperty("redis.poolTestOnBorrow"));
+            poolConfig.setTestOnReturn(PropertyLoader.getBooleanProperty("redis.poolTestOnReturn"));
+            poolConfig.setMaxTotal(80);
+            return connectionFactory;
+        }
+    }
+
+
+    @Bean
+    public static ObjectRedisTemplate objectRedisTemplate(JedisConnectionFactory jedisConnectionFactory) {
+        return new ObjectRedisTemplate(jedisConnectionFactory);
+    }
+
+    @Bean
+    public static RedisService redisService(ObjectRedisTemplate objectRedisTemplate) {
+        return new RedisServiceImpl(objectRedisTemplate);
     }
 
 }

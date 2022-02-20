@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xjh.core.mapper.UserMapper">
+    <resultMap id="BaseResultMap" type="com.xjh.common.po.UserPO">
+        <id property="userId" column="user_id"/>
+        <result property="name" column="name"/>
+        <result property="account" column="account"/>
+        <result property="password" column="password" />
+        <result property="email" column="email"/>
+        <result property="img" column="img"/>
+    </resultMap>
+    <insert id="insertUser">
+        insert into user(account,password,email)
+        values(#{account},#{password},#{email})
+    </insert>
+
+    <select id="selectUserByAccount" resultMap="BaseResultMap">
+        select * from user where account = #{account}
+    </select>
+    <select id="selectAccountCount" resultType="java.lang.Integer">
+        select count(*) from user where account = #{account}
+    </select>
+
+</mapper>
