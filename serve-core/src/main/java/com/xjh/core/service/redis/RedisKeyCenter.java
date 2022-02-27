@@ -43,6 +43,14 @@ public class RedisKeyCenter {
         return String.format("user_token:user_login_info:%s", token);
     }
 
+    public static String getUserEmailInfoRedisKey(String token) {
+        return String.format("user_token:user_email_info:%s", token);
+    }
+
+    public static String getUserEmailTimeInfoRediskey(String token) {
+        return String.format("user_token:email_time_info:%s", token);
+    }
+
     public static String getUserWsLoginInfo(String name) {
         return String.format("user_ws_info:%s", name);
     }

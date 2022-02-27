@@ -12,7 +12,7 @@ public interface UserService {
      * @param userInfo 注册信息
      * @return 是否成功
      */
-    Boolean register(UserPO userInfo);
+    Boolean register(UserPO userInfo, String code);
 
     /**
      * 登录
@@ -25,10 +25,10 @@ public interface UserService {
     /**
      * 更改密码
      *
-     * @param userInfo 用户信息
+     * @param password 用户信息
      * @return 是否成功
      */
-    Boolean changePassword(UserPO userInfo);
+    Boolean changePassword(String password);
 
     /**
      * 更改用户邮箱
@@ -37,4 +37,6 @@ public interface UserService {
      * @return 是否成功
      */
     Boolean changeUserEmail(UserPO userInfo);
+
+    Boolean sendEmail(String emailName);
 }

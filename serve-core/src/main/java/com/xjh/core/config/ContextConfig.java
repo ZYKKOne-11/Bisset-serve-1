@@ -25,6 +25,8 @@ import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
@@ -119,4 +121,20 @@ public class ContextConfig {
         return new RedisServiceImpl(objectRedisTemplate);
     }
 
+    @Bean
+    public JavaMailSender javaMailSender(){
+        logger.info("==== Java Mail Sender Config execute ====");
+        JavaMailSenderImpl javaMailSender = new JavaMailSenderImpl();
+        javaMailSender.setHost(PropertyLoader.getProperty("mail.host"));
+        javaMailSender.setPort(PropertyLoader.getIntProperty("mail.port"));
+        javaMailSender.setUsername(PropertyLoader.getProperty("mail.username"));
+        javaMailSender.setPassword(PropertyLoader.getProperty("mail.password"));
+        javaMailSender.setDefaultEncoding("UTF-8");
+        /*===============JavaMailProperties===============*/
+        Properties javaMailProperties = new Properties();
+        javaMailProperties.setProperty("mail.smtp.socketFactory.class", PropertyLoader.getProperty("mail.smtp.socketFactory.class"));
+        javaMailSender.setJavaMailProperties(javaMailProperties);
+
+        return javaMailSender;
+    }
 }

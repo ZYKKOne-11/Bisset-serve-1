@@ -13,6 +13,11 @@
         insert into user(account,password,email)
         values(#{account},#{password},#{email})
     </insert>
+    <insert id="insertPasswordById">
+        insert into user(password)
+        values(#{password})
+        where user_id = #{userId}
+    </insert>
 
     <select id="selectUserByAccount" resultMap="BaseResultMap">
         select * from user where account = #{account}

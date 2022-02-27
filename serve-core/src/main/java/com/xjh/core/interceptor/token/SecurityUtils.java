@@ -10,7 +10,7 @@ import com.xjh.core.service.redis.RedisService;
 import org.apache.commons.lang.StringUtils;
 
 public class SecurityUtils {
-    public static final Integer TOKEN_TTL_TIME = 604800;
+    public static final Integer TOKEN_TTL_TIME = 86400;
     private static ThreadLocal<UserPO> threadLocal = new ThreadLocal();
     private static ThreadLocal<Long> doorForOpeUserIdThreadLocal = new ThreadLocal();
     private static ThreadLocal<String> remoteIpAddress = new ThreadLocal();

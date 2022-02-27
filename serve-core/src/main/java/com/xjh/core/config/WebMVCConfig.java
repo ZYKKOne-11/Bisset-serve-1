@@ -22,6 +22,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
         List<String> excludePath = new ArrayList<>();
         excludePath.add("/user/login");
         excludePath.add("/user/register");
+        excludePath.add("/user/send-email");
         excludePath.add("/web/#/login");
 
         excludePath.add("**/*.gif");

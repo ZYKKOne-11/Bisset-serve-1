@@ -4,10 +4,7 @@ import com.xjh.common.exception.CommonException;
 import com.xjh.common.model.ResultModel;
 import com.xjh.common.po.UserPO;
 import com.xjh.core.service.user.UserService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -21,9 +18,19 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResultModel<Boolean> register(@RequestBody UserPO userInfo) {
+    public ResultModel<Boolean> register(@RequestBody UserPO userInfo, @RequestBody String code) {
         try {
-            Boolean res = userService.register(userInfo);
+            Boolean res = userService.register(userInfo, code);
+            return ResultModel.success(res);
+        } catch (CommonException e) {
+            return ResultModel.fail(e);
+        }
+    }
+
+    @PostMapping("/send-email")
+    public ResultModel<Boolean> sendEmail(@RequestParam("email") String emailName) {
+        try {
+            Boolean res = userService.sendEmail(emailName);
             return ResultModel.success(res);
         } catch (CommonException e) {
             return ResultModel.fail(e);
@@ -41,9 +48,19 @@ public class UserController {
     }
 
     @PostMapping("/changePassword")
-    public ResultModel<Boolean> changePassword(@RequestBody UserPO userInfo) {
+    public ResultModel<Boolean> changePassword(String password) {
         try {
-            Boolean res = userService.changePassword(userInfo);
+            Boolean res = userService.changePassword(password);
+            return ResultModel.success(res);
+        } catch (CommonException e) {
+            return ResultModel.fail(e);
+        }
+    }
+
+    @PostMapping("/change-email")
+    public ResultModel<Boolean> changeEmail(@RequestBody UserPO userInfo) {
+        try {
+            Boolean res = userService.changeUserEmail(userInfo);
             return ResultModel.success(res);
         } catch (CommonException e) {
             return ResultModel.fail(e);
