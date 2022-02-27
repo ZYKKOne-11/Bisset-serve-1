@@ -5,6 +5,7 @@ import com.xjh.common.exception.CommonException;
 import com.xjh.common.po.UserPO;
 import com.xjh.common.utils.PropertyLoader;
 import com.xjh.common.utils.security.DigestUtil;
+import com.xjh.common.vo.UserVO;
 import com.xjh.core.config.ApplicationConstant;
 import com.xjh.core.interceptor.token.SecurityUtils;
 import com.xjh.core.interceptor.token.TokenUtil;
@@ -48,18 +49,19 @@ public class UserServiceImpl implements UserService {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
-    public Boolean register(UserPO userInfo, String code) {
-        Integer count = userMapper.selectAccountCount(userInfo);
+    public Boolean register(UserVO userInfo) {
+        UserPO userPO = userInfo.getUser();
+        Integer count = userMapper.selectAccountCount(userPO);
         if (count > 0) {
             throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "该用户名已存在");
         }
-        String emailRedisKey = getEmailRedisKey(userInfo.getEmail());
+        String emailRedisKey = getEmailRedisKey(userPO.getEmail());
         String emailCode = redisService.get(emailRedisKey);
-        if (!emailCode.equals(code)) {
-            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误，请重新输入");
+        if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误或失效，请再试一次");
         }
-        userInfo.setPassword(DigestUtil.digest(userInfo.getPassword(), ApplicationConstant.firstEncryptSalt, ApplicationConstant.firstDigestTimes));
-        userMapper.insertUser(userInfo);
+        userPO.setPassword(DigestUtil.digest(userPO.getPassword(), ApplicationConstant.firstEncryptSalt, ApplicationConstant.firstDigestTimes));
+        userMapper.insertUser(userPO);
         return true;
     }
 
@@ -83,7 +85,7 @@ public class UserServiceImpl implements UserService {
         try {
             Long userId = SecurityUtils.getUserId();
             String digestPassword = DigestUtil.digest(password, ApplicationConstant.firstEncryptSalt, ApplicationConstant.firstDigestTimes);
-            userMapper.insertPasswordById(userId, digestPassword);
+            userMapper.updatePasswordById(userId, digestPassword);
             return true;
         } catch (Exception e) {
             logger.error("修改密码异常，err: " + e.getMessage());

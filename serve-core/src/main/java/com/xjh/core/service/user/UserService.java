@@ -1,6 +1,7 @@
 package com.xjh.core.service.user;
 
 import com.xjh.common.po.UserPO;
+import com.xjh.common.vo.UserVO;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -12,7 +13,7 @@ public interface UserService {
      * @param userInfo 注册信息
      * @return 是否成功
      */
-    Boolean register(UserPO userInfo, String code);
+    Boolean register(UserVO userInfo);
 
     /**
      * 登录

@@ -3,6 +3,7 @@ package com.xjh.task.controller;
 import com.xjh.common.exception.CommonException;
 import com.xjh.common.model.ResultModel;
 import com.xjh.common.po.UserPO;
+import com.xjh.common.vo.UserVO;
 import com.xjh.core.service.user.UserService;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,9 +19,9 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResultModel<Boolean> register(@RequestBody UserPO userInfo, @RequestBody String code) {
+    public ResultModel<Boolean> register(@RequestBody UserVO userInfo) {
         try {
-            Boolean res = userService.register(userInfo, code);
+            Boolean res = userService.register(userInfo);
             return ResultModel.success(res);
         } catch (CommonException e) {
             return ResultModel.fail(e);

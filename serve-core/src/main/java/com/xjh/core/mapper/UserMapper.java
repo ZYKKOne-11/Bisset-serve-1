@@ -10,5 +10,5 @@ public interface UserMapper {
 
     void insertUser(UserPO userInfo);
 
-    void insertPasswordById(@Param("userId") Long userId, @Param("password") String digestPassword);
+    void updatePasswordById(@Param("userId") Long userId, @Param("password") String digestPassword);
 }

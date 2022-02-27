@@ -34,6 +34,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
         excludePath.add("**/*.ico");
         excludePath.add("**/*.css");
         excludePath.add("**/*.js");
+        excludePath.add("/**/error");
         registry.addInterceptor(loginInterceptor).addPathPatterns("/**").excludePathPatterns(excludePath);
     }
 
