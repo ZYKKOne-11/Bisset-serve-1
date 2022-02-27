@@ -61,6 +61,17 @@ public class TokenUtil {
         }
     }
 
+    public static String getToken(HttpServletRequest req) {
+        Cookie[] cks = req.getCookies();
+        for (int i = 0; i < cks.length; ++i) {
+            Cookie cookie = cks[i];
+            if ("token".equals(cookie.getName())) {
+                return new String(Base64.decodeBase64(cookie.getValue().getBytes()));
+            }
+        }
+        return "";
+    }
+
     public static String checkToken(String token, String refreshToken) {
         if (token != null && refreshToken != null) {
             token = new String(Base64.decodeBase64(token.getBytes()));

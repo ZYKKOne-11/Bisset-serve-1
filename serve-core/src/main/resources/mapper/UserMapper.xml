@@ -4,14 +4,14 @@
     <resultMap id="BaseResultMap" type="com.xjh.common.po.UserPO">
         <id property="userId" column="user_id"/>
         <result property="name" column="name"/>
-        <result property="account" column="account"/>
+        <result property="tag" column="tag"/>
         <result property="password" column="password" />
         <result property="email" column="email"/>
         <result property="img" column="img"/>
     </resultMap>
     <insert id="insertUser">
-        insert into user(account,password,email)
-        values(#{account},#{password},#{email})
+        insert into user(name,password,email)
+        values(#{name},#{password},#{email})
     </insert>
     <update id="updatePasswordById">
         update user
@@ -19,11 +19,17 @@
         where user_id = #{userId}
     </update>
 
-    <select id="selectUserByAccount" resultMap="BaseResultMap">
-        select * from user where account = #{account}
+    <select id="selectUserByName" resultMap="BaseResultMap">
+        select * from user where name = #{name}
     </select>
-    <select id="selectAccountCount" resultType="java.lang.Integer">
-        select count(*) from user where account = #{account}
+    <select id="selectUserByEmail" resultMap="BaseResultMap">
+        select * from user where email = #{email}
+    </select>
+    <select id="selectAccountCountByEmail" resultType="java.lang.Integer">
+        select count(*) from user where email = #{email}
+    </select>
+    <select id="selectAccountCountByName" resultType="java.lang.Integer">
+        select count(*) from user where name = #{name}
     </select>
 
 </mapper>

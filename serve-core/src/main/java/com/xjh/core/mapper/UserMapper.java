@@ -4,9 +4,13 @@ import com.xjh.common.po.UserPO;
 import org.apache.ibatis.annotations.Param;
 
 public interface UserMapper {
-    UserPO selectUserByAccount(UserPO userInfo);
+    UserPO selectUserByEmail(@Param("email") String account);
 
-    Integer selectAccountCount(UserPO userInfo);
+    UserPO selectUserByName(@Param("name") String account);
+
+    Integer selectAccountCountByEmail(@Param("email") String account);
+
+    Integer selectAccountCountByName(@Param("name") String account);
 
     void insertUser(UserPO userInfo);
 

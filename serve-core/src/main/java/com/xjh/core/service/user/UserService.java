@@ -21,15 +21,16 @@ public interface UserService {
      * @param userInfo 登录信息
      * @return 令牌
      */
-    UserPO login(UserPO userInfo, HttpServletRequest request, HttpServletResponse response);
+    UserPO login(UserVO userInfo, HttpServletRequest request, HttpServletResponse response);
 
     /**
      * 更改密码
      *
-     * @param password 用户信息
+     * @param oldPassword 旧密码
+     * @Param newPassword 新密码
      * @return 是否成功
      */
-    Boolean changePassword(String password);
+    Boolean changePassword(String oldPassword,String newPassword,HttpServletRequest req);
 
     /**
      * 更改用户邮箱

@@ -14,20 +14,26 @@ import com.xjh.core.service.redis.RedisKeyCenter;
 import com.xjh.core.service.redis.RedisService;
 import com.xjh.core.service.user.UserService;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -51,7 +57,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public Boolean register(UserVO userInfo) {
         UserPO userPO = userInfo.getUser();
-        Integer count = userMapper.selectAccountCount(userPO);
+        Integer count = userMapper.selectAccountCountByName(userPO.getName());
         if (count > 0) {
             throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "该用户名已存在");
         }
@@ -60,19 +66,26 @@ public class UserServiceImpl implements UserService {
         if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误或失效，请再试一次");
         }
-        userPO.setPassword(DigestUtil.digest(userPO.getPassword(), ApplicationConstant.firstEncryptSalt, ApplicationConstant.firstDigestTimes));
+        userPO.setPassword(Base64.encodeBase64String(userInfo.getUser().getPassword().getBytes()));
         userMapper.insertUser(userPO);
         return true;
     }
 
     @Override
-    public UserPO login(UserPO userInfo, HttpServletRequest request, HttpServletResponse response) {
-        UserPO userPO = userMapper.selectUserByAccount(userInfo);
+    public UserPO login(UserVO userInfo, HttpServletRequest request, HttpServletResponse response) {
+        UserPO userPO = null;
+        String account = userInfo.getAccount();
+        //邮箱登录
+        if (isEmail(account)) {
+            userPO = userMapper.selectUserByEmail(account);
+        } else {
+            userPO = userMapper.selectUserByName(account);
+        }
         if (userPO == null) {
             throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "该用户名不存在，请重新登录");
         }
-        String password = DigestUtil.digest(userInfo.getPassword(), ApplicationConstant.firstEncryptSalt, ApplicationConstant.firstDigestTimes);
-        if (!Objects.equals(password, userPO.getPassword())) {
+        String password = StringUtils.newStringUsAscii(Base64.decodeBase64(userPO.getPassword()));
+        if (!Objects.equals(password, userInfo.getUser().getPassword())) {
             throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "用户名或者密码错误,请重新登录");
         }
         String token = TokenUtil.generateToken(userPO.getUserId(), request, response);
@@ -81,11 +94,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Boolean changePassword(String password) {
+    public Boolean changePassword(String oldPassword, String newPassword, HttpServletRequest req) {
         try {
             Long userId = SecurityUtils.getUserId();
-            String digestPassword = DigestUtil.digest(password, ApplicationConstant.firstEncryptSalt, ApplicationConstant.firstDigestTimes);
-            userMapper.updatePasswordById(userId, digestPassword);
+            UserPO userInfo = SecurityUtils.getUserInfo();
+            String oldPas = userInfo.getPassword();
+            String decodePassword = StringUtils.newStringUsAscii(Base64.decodeBase64(oldPas));
+            if (!decodePassword.equals(oldPassword)) {
+                throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "旧密码不正确，请重新输入");
+            }
+            newPassword = Base64.encodeBase64String(newPassword.getBytes());
+            userInfo.setPassword(newPassword);
+            userMapper.updatePasswordById(userId, newPassword);
+            String token = TokenUtil.getToken(req);
+            SecurityUtils.setUserInfo(token, userInfo, redisService);
             return true;
         } catch (Exception e) {
             logger.error("修改密码异常，err: " + e.getMessage());
@@ -103,22 +125,27 @@ public class UserServiceImpl implements UserService {
         if (!checkEmailParam(emailName)) {
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "一份钟内请不要重复邮箱验证");
         }
-        //构建一个邮件对象
-        SimpleMailMessage message = new SimpleMailMessage();
-        //设置邮件主题
-        message.setSubject(emailSubject);
-        //设置邮件发送者
-        message.setFrom(emailFromUserName);
-        //设置邮件接收者，可以有多个接收者
-        message.setTo(emailName);
-        //设置邮件发送日期
-        message.setSentDate(new Date());
+        if (!isEmail(emailName)) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱格式非法，请重新输入");
+        }
         //设置邮件的正文
         String code = verifyCode(6);
-        message.setText("【Nice Coder】您好，您的邮箱验证码为" + code + "，有效期为三分钟。如非您本人操作，请忽视本条消息，谢谢。");
         //发送邮件
         try {
-            javaMailSender.send(message);
+            // 使用JavaMail的MimeMessage，支持更加复杂的邮件格式和内容
+            MimeMessage msg = javaMailSender.createMimeMessage();
+            // 创建MimeMessageHelper对象，处理MimeMessage的辅助类
+            MimeMessageHelper message = new MimeMessageHelper(msg, true);
+            //设置邮件主题
+            message.setSubject(emailSubject);
+            //设置邮件发送者
+            message.setFrom(emailFromUserName);
+            //设置邮件接收者，可以有多个接收者
+            message.setTo(emailName);
+            //设置邮件发送日期
+            message.setSentDate(new Date());
+            message.setText("<head> <base target=\"_blank\" /> <style type=\"text/css\"> ::-webkit-scrollbar { display: none; } </style> <style id=\"cloudAttachStyle\" type=\"text/css\"> #divNeteaseBigAttach, #divNeteaseBigAttach_bak { display: none; } </style> <style id=\"blockquoteStyle\" type=\"text/css\"> blockquote { display: none; } </style> <style type=\"text/css\"> body { font-size: 14px; font-family: arial, verdana, sans-serif; line-height: 1.666; padding: 0; margin: 0; overflow: auto; white-space: normal; word-wrap: break-word; min-height: 100px } td, input, button, select, body { font-family: Helvetica, 'Microsoft Yahei', verdana } pre { white-space: pre-wrap; white-space: -moz-pre-wrap; white-space: -pre-wrap; white-space: -o-pre-wrap; word-wrap: break-word; width: 95% } th, td { font-family: arial, verdana, sans-serif; line-height: 1.666 } img { border: 0 } header, footer, section, aside, article, nav, hgroup, figure, figcaption { display: block } blockquote { margin-right: 0px } </style> </head> <body tabindex=\"0\" role=\"listitem\"> <table width=\"700\" border=\"0\" align=\"center\" cellspacing=\"0\" style=\"width:700px;\"> <tbody> <tr> <td> <h1 style=\"color: #002752;font-size: 48px;font-weight: bolder;font-family: sans-serif;\">NiceCoder</h1> <div style=\"width:700px;margin:0 auto;border-bottom:1px solid #ccc;margin-bottom:30px;\"> <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"700\" height=\"39\" style=\"font:12px Tahoma, Arial, 宋体;\"> <tbody> <tr> <td width=\"210\"></td> </tr> </tbody> </table> </div> <div style=\"width:680px;padding:0 10px;margin:0 auto;\"> <div style=\"line-height:1.5;font-size:14px;margin-bottom:25px;color:#4d4d4d;\"> <strong style=\"display:block;margin-bottom:15px;\">尊敬的用户：<span style=\"color:#f60;font-size: 16px;\"></span>您好！</strong> <strong style=\"display:block;margin-bottom:15px;\"> 您正在进行<span style=\"color: #002752;font-size: 24px\"> 邮箱验证 </span>操作，请在验证码输入框中输入：<span style=\"color:#0076f4;font-size: 24px\">" + code + "</span>，以完成操作。 </strong> </div> <div style=\"margin-bottom:30px;\"> <small style=\"display:block;margin-bottom:20px;font-size:12px;\"> <p style=\"color:#747474;\"> 注意：此操作可能会修改您的密码、登录邮箱或绑定登录邮箱。如非本人操作，请及时登录并修改密码以保证帐户安全 <br>（工作人员不会向你索取此验证码，请勿泄漏！) </p> </small> </div> </div> <div style=\"width:700px;margin:0 auto;\"> <div style=\"padding:10px 10px 0;border-top:1px solid #ccc;color:#747474;margin-bottom:20px;line-height:1.3em;font-size:12px;\"> <p>此为系统邮件，请勿回复<br> 请保管好您的邮箱，避免账号被他人盗用 </p> <p>NiceCoder</p> </div> </div> </td> </tr> </tbody> </table> </body>", true); // 内容！
+            javaMailSender.send(msg);
             String token = Base64.encodeBase64String(emailName.getBytes());
             String emailRedisKey = RedisKeyCenter.getUserEmailInfoRedisKey(token);
             String emailSendTimeRedisKey = RedisKeyCenter.getUserEmailTimeInfoRediskey(token);
@@ -160,5 +187,14 @@ public class UserServiceImpl implements UserService {
             return true;
         }
         return false;
+    }
+
+    /**
+     * @return 如果是符合邮箱格式的字符串, 返回true, 否则为false
+     */
+    public static boolean isEmail(String content) {
+        String pattern = "^[a-zA-Z0-9_.-]+@[a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*\\.[a-zA-Z0-9]{2,6}$";
+        boolean isMatch = Pattern.matches(pattern, content);
+        return isMatch;
     }
 }

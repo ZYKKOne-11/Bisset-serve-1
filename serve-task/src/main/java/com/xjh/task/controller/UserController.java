@@ -5,6 +5,7 @@ import com.xjh.common.model.ResultModel;
 import com.xjh.common.po.UserPO;
 import com.xjh.common.vo.UserVO;
 import com.xjh.core.service.user.UserService;
+import org.apache.catalina.User;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -29,9 +30,9 @@ public class UserController {
     }
 
     @PostMapping("/send-email")
-    public ResultModel<Boolean> sendEmail(@RequestParam("email") String emailName) {
+    public ResultModel<Boolean> sendEmail(@RequestBody UserVO userInfo) {
         try {
-            Boolean res = userService.sendEmail(emailName);
+            Boolean res = userService.sendEmail(userInfo.getEmail());
             return ResultModel.success(res);
         } catch (CommonException e) {
             return ResultModel.fail(e);
@@ -39,7 +40,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResultModel<UserPO> login(@RequestBody UserPO userInfo, HttpServletRequest request, HttpServletResponse response) {
+    public ResultModel<UserPO> login(@RequestBody UserVO userInfo, HttpServletRequest request, HttpServletResponse response) {
         try {
             UserPO res = userService.login(userInfo, request, response);
             return ResultModel.success(res);
@@ -49,9 +50,9 @@ public class UserController {
     }
 
     @PostMapping("/changePassword")
-    public ResultModel<Boolean> changePassword(String password) {
+    public ResultModel<Boolean> changePassword(@RequestBody UserVO userInfo, HttpServletRequest req) {
         try {
-            Boolean res = userService.changePassword(password);
+            Boolean res = userService.changePassword(userInfo.getOldPassword(), userInfo.getNewPassword(), req);
             return ResultModel.success(res);
         } catch (CommonException e) {
             return ResultModel.fail(e);
