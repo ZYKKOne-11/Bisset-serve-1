@@ -1,5 +1,6 @@
 package com.xjh.core.service.Task;
 
+import com.xjh.common.bean.Hotspot;
 import com.xjh.common.po.PlanTaskPO;
 import com.xjh.common.utils.Page;
 import com.xjh.common.vo.RequestTaskVO;
@@ -16,4 +17,6 @@ public interface TaskService {
     Boolean updatePlanAndTask(PlanTaskPO planTaskPO);
 
     Boolean updateStatus(RequestTaskVO taskVO);
+
+    List<Hotspot> queryHotspot();
 }

@@ -20,7 +20,7 @@ public interface TaskMapper {
 
     void updatePlan(PlanTaskPO planTaskPO);
 
-    void deletePlanAndTask(Integer id);
+    void deletePlanAndTask(@Param("pId") Integer id, @Param("userId") Long userId);
 
     void updateStatus(RequestTaskVO taskVO);
 

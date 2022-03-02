@@ -12,7 +12,6 @@
         <collection property="tasks" ofType="com.xjh.common.bean.Task" javaType="List">
             <id property="id" column="id"/>
             <result property="name" column="name"/>
-            <result property="userId" column="user_id"/>
             <result property="content" column="content"/>
             <result property="createTime" column="create_time"/>
             <result property="planId" column="plan_id"/>
@@ -31,7 +30,6 @@
         <collection property="tasks" ofType="com.xjh.common.bean.Task" javaType="List">
             <id property="id" column="t_id"/>
             <result property="name" column="t_name"/>
-            <result property="userId" column="t_user_id"/>
             <result property="content" column="content"/>
             <result property="createTime" column="t_create_time"/>
             <result property="planId" column="plan_id"/>
@@ -39,11 +37,11 @@
         </collection>
     </resultMap>
     <sql id="taskColumn">
-        name,user_id,content,create_time,plan_id,status
+        name,content,create_time,plan_id,status
     </sql>
     <sql id="planTaskColumn">
         p.id,p.name,p.type,p.time_len,p.user_id,p.create_time,p.end_time,
-        t.id as t_id,t.name as t_name,t.user_id as t_user_id,t.content,
+        t.id as t_id,t.name as t_name,t.content,
         t.create_time as t_create_time,t.plan_id,t.status
     </sql>
 
@@ -77,7 +75,7 @@
         <include refid="queryTaskVOPlan"/>
         and p.id=t.plan_id
         and (p.end_time>#{date} or p.end_time is null)
-        order by p.createTime desc
+        order by p.create_time desc
     </select>
 
     <select id="queryHistoryPlan" resultMap="JoinQueryResultMap">
@@ -85,7 +83,7 @@
         <include refid="queryTaskVOPlan"/>
         and p.id=t.plan_id
         and p.end_time &lt; #{date}
-        order by p.createTime desc
+        order by p.create_time desc
     </select>
 
 
@@ -97,7 +95,7 @@
     <delete id="deletePlanAndTask">
         delete p,t from plan p left join task t
         on  p.id = t.plan_id
-        where p.id=#{id}
+        where p.id=#{pId}  and p.user_id = #{userId}
     </delete>
 
     <insert id="insertPlan" parameterType="com.xjh.common.po.PlanTaskPO">
@@ -112,7 +110,7 @@
         insert into task(<include refid="taskColumn"/>)values
         <!--item就是List里每一项的对象名，要用","分割每一条数据，最后要";"结尾-->
         <foreach collection="list" item="task" separator="," close=";">
-            (#{task.name},#{task.userId},#{task.content},#{task.createTime},#{task.planId},#{task.status})
+            (#{task.name},#{task.content},#{task.createTime},#{task.planId},#{task.status})
         </foreach>
     </insert>
 

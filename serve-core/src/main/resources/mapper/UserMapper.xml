@@ -31,5 +31,9 @@
     <select id="selectAccountCountByName" resultType="java.lang.Integer">
         select count(*) from user where name = #{name}
     </select>
+    <select id="selectAccountCountByNameEmail" resultType="java.lang.Integer">
+        select count(*) from user
+        where name = #{name}  or  email = #{email}
+    </select>
 
 </mapper>

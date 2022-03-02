@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xjh.core.mapper.HotspotMapper">
+    <resultMap id="BaseResultMap" type="com.xjh.common.bean.Hotspot">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="url" column="url"/>
+    </resultMap>
+    <select id="queryHotspot" resultMap="BaseResultMap">
+        select * from news
+    </select>
+
+
+</mapper>

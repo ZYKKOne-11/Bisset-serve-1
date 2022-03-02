@@ -1,13 +1,18 @@
 package com.xjh.core.service.Task.impl;
 
 import com.github.pagehelper.PageHelper;
+import com.xjh.common.bean.Hotspot;
 import com.xjh.common.bean.Task;
 import com.xjh.common.enums.PlanTypeEnum;
 import com.xjh.common.enums.QueryPlanEnum;
 import com.xjh.common.enums.TaskStatusEnum;
+import com.xjh.common.exception.CommonErrorCode;
+import com.xjh.common.exception.CommonException;
 import com.xjh.common.po.PlanTaskPO;
 import com.xjh.common.utils.Page;
 import com.xjh.common.vo.RequestTaskVO;
+import com.xjh.core.interceptor.token.SecurityUtils;
+import com.xjh.core.mapper.HotspotMapper;
 import com.xjh.core.mapper.TaskMapper;
 import com.xjh.core.service.Task.TaskService;
 import org.springframework.stereotype.Service;
@@ -22,10 +27,14 @@ public class TaskServiceImpl implements TaskService {
     @Resource
     private TaskMapper taskMapper;
 
+    @Resource
+    private HotspotMapper hotspotMapper;
+
     @Override
     public List<PlanTaskPO> getTaskByPlanId(RequestTaskVO taskVO) {
         try {
             List<PlanTaskPO> res = null;
+            taskVO.setUserId(SecurityUtils.getUserId());
             QueryPlanEnum queryType = taskVO.getQueryType();
             if (queryType == QueryPlanEnum.ALIVE_PLAN) {
                 res = taskMapper.queryAlivePlan(taskVO, new Date());
@@ -34,14 +43,15 @@ public class TaskServiceImpl implements TaskService {
             }
             return res;
         } catch (Exception e) {
-            return null;
+            throw new CommonException(CommonErrorCode.SERVER_POWER_LESS, "查询数据异常，请稍后重试");
         }
     }
 
     @Override
     public Boolean deletePlan(Integer id) {
         try {
-            taskMapper.deletePlanAndTask(id);
+            Long userId = SecurityUtils.getUserId();
+            taskMapper.deletePlanAndTask(id, userId);
             return true;
         } catch (Exception e) {
             return false;
@@ -52,6 +62,7 @@ public class TaskServiceImpl implements TaskService {
     public Boolean postPlan(PlanTaskPO planTaskPO) {
         List<Task> tasks = planTaskPO.getTasks();
         planTaskPO.setCreateTime(new Date());
+        planTaskPO.setUserId(SecurityUtils.getUserId());
         addEndTimeByType(planTaskPO);
         taskMapper.insertPlan(planTaskPO);
         Integer planId = planTaskPO.getId();
@@ -70,6 +81,7 @@ public class TaskServiceImpl implements TaskService {
         } else if (planTaskPO.getType() == PlanTypeEnum.LONG_PLAN) {
             planTaskPO.setTimeLen(-1);
         }
+        planTaskPO.setUserId(SecurityUtils.getUserId());
         taskMapper.updatePlan(planTaskPO);
         List<Task> tasks = planTaskPO.getTasks();
         tasks.stream().forEach(t -> {
@@ -88,10 +100,22 @@ public class TaskServiceImpl implements TaskService {
             } else {
                 taskVO.setStatus(TaskStatusEnum.UN_FINISH_TASK);
             }
+            Long userId = SecurityUtils.getUserId();
+            taskVO.setUserId(userId);
             taskMapper.updateStatus(taskVO);
             return true;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    @Override
+    public List<Hotspot> queryHotspot() {
+        try {
+            List<Hotspot> hotspot = hotspotMapper.queryHotspot();
+            return hotspot;
+        } catch (Exception e) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "查询热点信息异常");
         }
     }
 
@@ -112,5 +136,6 @@ public class TaskServiceImpl implements TaskService {
             plan.setTimeLen(-1);
         }
     }
+
 
 }

@@ -2,6 +2,7 @@ package com.xjh.core.service.user;
 
 import com.xjh.common.po.UserPO;
 import com.xjh.common.vo.UserVO;
+import org.apache.catalina.User;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,10 +28,10 @@ public interface UserService {
      * 更改密码
      *
      * @param oldPassword 旧密码
-     * @Param newPassword 新密码
      * @return 是否成功
+     * @Param newPassword 新密码
      */
-    Boolean changePassword(String oldPassword,String newPassword,HttpServletRequest req);
+    Boolean changePassword(String oldPassword, String newPassword, HttpServletRequest req);
 
     /**
      * 更改用户邮箱
@@ -41,4 +42,6 @@ public interface UserService {
     Boolean changeUserEmail(UserPO userInfo);
 
     Boolean sendEmail(String emailName);
+
+    UserPO query();
 }

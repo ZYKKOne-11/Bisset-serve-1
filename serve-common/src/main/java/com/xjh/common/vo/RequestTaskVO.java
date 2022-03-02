@@ -11,7 +11,7 @@ public class RequestTaskVO {
 
     Integer tId;
 
-    Integer userId;
+    Long userId;
 
     String planName;
 

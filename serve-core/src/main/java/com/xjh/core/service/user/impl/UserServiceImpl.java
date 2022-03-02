@@ -13,6 +13,7 @@ import com.xjh.core.mapper.UserMapper;
 import com.xjh.core.service.redis.RedisKeyCenter;
 import com.xjh.core.service.redis.RedisService;
 import com.xjh.core.service.user.UserService;
+import org.apache.catalina.User;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
@@ -57,15 +58,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public Boolean register(UserVO userInfo) {
         UserPO userPO = userInfo.getUser();
-        Integer count = userMapper.selectAccountCountByName(userPO.getName());
+        Integer count = userMapper.selectAccountCountByNameEmail(userPO.getName(), userPO.getEmail());
         if (count > 0) {
-            throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "该用户名已存在");
+            throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "该用户名或邮箱已存在");
         }
         String emailRedisKey = getEmailRedisKey(userPO.getEmail());
         String emailCode = redisService.get(emailRedisKey);
         if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误或失效，请再试一次");
         }
+        userPO.setImg("default");
         userPO.setPassword(Base64.encodeBase64String(userInfo.getUser().getPassword().getBytes()));
         userMapper.insertUser(userPO);
         return true;
@@ -107,7 +109,8 @@ public class UserServiceImpl implements UserService {
             userInfo.setPassword(newPassword);
             userMapper.updatePasswordById(userId, newPassword);
             String token = TokenUtil.getToken(req);
-            SecurityUtils.setUserInfo(token, userInfo, redisService);
+            String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
+            redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
             return true;
         } catch (Exception e) {
             logger.error("修改密码异常，err: " + e.getMessage());
@@ -160,6 +163,16 @@ public class UserServiceImpl implements UserService {
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮件发送失败，请重试");
         }
         return true;
+    }
+
+    @Override
+    public UserPO query() {
+        try {
+            UserPO userInfo = SecurityUtils.getUserInfo();
+            return userInfo;
+        } catch (Exception e) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "用户缓存信息失效，请重新登录");
+        }
     }
 
     private String verifyCode(int n) {

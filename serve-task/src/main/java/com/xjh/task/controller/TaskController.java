@@ -20,8 +20,12 @@ public class TaskController {
 
     @GetMapping("/plan")
     public ResultModel<List<PlanTaskPO>> getTaskByPlanId(@ModelAttribute RequestTaskVO taskVO) {
-        List<PlanTaskPO> res = taskService.getTaskByPlanId(taskVO);
-        return ResultModel.success(res, "数据查询成功");
+        try {
+            List<PlanTaskPO> res = taskService.getTaskByPlanId(taskVO);
+            return ResultModel.success(res, "数据查询成功");
+        } catch (CommonException e) {
+            return ResultModel.fail(e);
+        }
     }
 
     @PostMapping("/plan")

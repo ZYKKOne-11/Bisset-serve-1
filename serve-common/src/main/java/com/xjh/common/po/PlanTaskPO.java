@@ -22,7 +22,7 @@ public class PlanTaskPO {
     Integer timeLen;
 
     //创建计划Id
-    Integer userId;
+    Long userId;
 
     //计划创建时间
     Date createTime;

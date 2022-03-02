@@ -19,9 +19,6 @@ public class Task {
     //所属计划Id
     private Integer planId;
 
-    //创建任务及计划UserID
-    private Integer userId;
-
     //创建时间
     private Date createTime;
 

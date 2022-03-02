@@ -68,4 +68,14 @@ public class UserController {
             return ResultModel.fail(e);
         }
     }
+
+    @GetMapping("/query")
+    public ResultModel<UserPO> query() {
+        try {
+            UserPO user = userService.query();
+            return ResultModel.success(user);
+        } catch (CommonException e) {
+            return ResultModel.fail(e);
+        }
+    }
 }
