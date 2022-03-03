@@ -60,36 +60,42 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public Boolean postPlan(PlanTaskPO planTaskPO) {
-        List<Task> tasks = planTaskPO.getTasks();
-        planTaskPO.setCreateTime(new Date());
-        planTaskPO.setUserId(SecurityUtils.getUserId());
-        addEndTimeByType(planTaskPO);
-        taskMapper.insertPlan(planTaskPO);
-        Integer planId = planTaskPO.getId();
-        tasks.stream().forEach(t -> {
-            t.setPlanId(planId);
-            t.setCreateTime(new Date());
-        });
-        taskMapper.insertTask(tasks);
-        return true;
+        try {
+            List<Task> tasks = planTaskPO.getTasks();
+            if (planTaskPO.getCreateTime() == null) {
+                planTaskPO.setCreateTime(new Date());
+            }
+            planTaskPO.setUserId(SecurityUtils.getUserId());
+            addEndTimeByType(planTaskPO);
+            taskMapper.insertPlan(planTaskPO);
+            Integer planId = planTaskPO.getId();
+            tasks.stream().forEach(t -> {
+                t.setPlanId(planId);
+                t.setCreateTime(new Date());
+                t.setStatus(TaskStatusEnum.UN_FINISH_TASK);
+            });
+            taskMapper.insertTask(tasks);
+            return true;
+        } catch (Exception e) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "新建计划失败");
+        }
     }
 
     @Override
     public Boolean updatePlanAndTask(PlanTaskPO planTaskPO) {
-        if (planTaskPO.getType() == PlanTypeEnum.TODAY_PLAN) {
-            planTaskPO.setTimeLen(1);
-        } else if (planTaskPO.getType() == PlanTypeEnum.LONG_PLAN) {
-            planTaskPO.setTimeLen(-1);
+        try {
+            planTaskPO.setUserId(SecurityUtils.getUserId());
+            taskMapper.updatePlan(planTaskPO);
+            List<Task> tasks = planTaskPO.getTasks();
+            tasks.stream().forEach(t -> {
+                t.setCreateTime(new Date());
+            });
+            taskMapper.deleteTask(planTaskPO.getId());
+            taskMapper.insertTask(tasks);
+            return true;
+        } catch (Exception e) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "修改任务失败，请稍后重试");
         }
-        planTaskPO.setUserId(SecurityUtils.getUserId());
-        taskMapper.updatePlan(planTaskPO);
-        List<Task> tasks = planTaskPO.getTasks();
-        tasks.stream().forEach(t -> {
-            t.setCreateTime(new Date());
-        });
-        taskMapper.deleteTask(planTaskPO.getId());
-        taskMapper.insertTask(tasks);
-        return true;
     }
 
     @Override
@@ -105,7 +111,7 @@ public class TaskServiceImpl implements TaskService {
             taskMapper.updateStatus(taskVO);
             return true;
         } catch (Exception e) {
-            return false;
+            throw new CommonException(CommonErrorCode.REQUEST_PARAM_ERROR, "修改任务状态异常");
         }
     }
 
@@ -122,18 +128,15 @@ public class TaskServiceImpl implements TaskService {
 
     private void addEndTimeByType(PlanTaskPO plan) {
         PlanTypeEnum type = plan.getType();
-        Integer timeLen = plan.getTimeLen();
         Calendar calendar = Calendar.getInstance();
         if (type == PlanTypeEnum.TODAY_PLAN) {
             Long millis = calendar.getTimeInMillis();
             Long stamp = (millis - millis % 86400000) + 57600000; //86400000 一天的毫秒值
             plan.setEndTime(new Date(stamp));
-            plan.setTimeLen(1);
-        } else if (type == PlanTypeEnum.COUNTDOWN_PLAN) {
-            calendar.add(Calendar.DAY_OF_YEAR, timeLen);
-            plan.setEndTime(calendar.getTime());
         } else {
-            plan.setTimeLen(-1);
+            if (plan.getEndTime() == null) {
+                throw new CommonException(CommonErrorCode.REQUEST_PARAM_ERROR, "非今日计划请设置结束时间");
+            }
         }
     }
 

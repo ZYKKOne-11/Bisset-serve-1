@@ -5,7 +5,6 @@
         <id property="id" column="id"/>
         <result property="name" column="name"/>
         <result property="type" column="type" javaType="com.xjh.common.enums.PlanTypeEnum"/>
-        <result property="timeLen" column="time_len"/>
         <result property="userId" column="user_id"/>
         <result property="createTime" column="create_time"/>
         <result property="endTime" column="end_time"/>
@@ -23,7 +22,6 @@
         <id property="id" column="id"/>
         <result property="name" column="name"/>
         <result property="type" column="type" javaType="com.xjh.common.enums.PlanTypeEnum"/>
-        <result property="timeLen" column="time_len"/>
         <result property="userId" column="user_id"/>
         <result property="createTime" column="create_time"/>
         <result property="endTime" column="end_time"/>
@@ -40,7 +38,7 @@
         name,content,create_time,plan_id,status
     </sql>
     <sql id="planTaskColumn">
-        p.id,p.name,p.type,p.time_len,p.user_id,p.create_time,p.end_time,
+        p.id,p.name,p.type,p.user_id,p.create_time,p.end_time,
         t.id as t_id,t.name as t_name,t.content,
         t.create_time as t_create_time,t.plan_id,t.status
     </sql>
@@ -99,8 +97,8 @@
     </delete>
 
     <insert id="insertPlan" parameterType="com.xjh.common.po.PlanTaskPO">
-        insert into plan(name,type,time_len,user_id,create_time,end_time)
-        values (#{name},#{type},#{timeLen},#{userId},#{createTime},#{endTime})
+        insert into plan(name,type,user_id,create_time,end_time)
+        values (#{name},#{type},#{userId},#{createTime},#{endTime})
         <selectKey keyProperty="id" resultType="int" order="AFTER">
             SELECT LAST_INSERT_ID();
         </selectKey>
@@ -119,9 +117,6 @@
         <set>
             name =#{name},
             type=#{type},
-<!--            <if test="timeLen != null and timeLen >0">-->
-            time_len=#{timeLen}
-<!--            </if>-->
         </set>
         where id=#{id} and user_id = #{userId}
     </update>
