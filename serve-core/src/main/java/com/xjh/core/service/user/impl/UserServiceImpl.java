@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 @Service
 public class UserServiceImpl implements UserService {
 
+    private static final String DFLAG_USER_LOG = "_self_user_login_debug";
     private static final Integer TOKEN_EMAIL_TIME = 300;
     private static final Long TOKEN_EMAIL_SEND_TIME_MILLIS = 60000L;
     private String emailSubject = PropertyLoader.getProperty("mail.subject");
@@ -58,10 +59,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public Boolean register(UserVO userInfo) {
         UserPO userPO = userInfo.getUser();
-        Integer count = userMapper.selectAccountCountByNameEmail(userPO.getName(), userPO.getEmail());
-        if (count > 0) {
-            throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "该用户名或邮箱已存在");
-        }
         String emailRedisKey = getEmailRedisKey(userPO.getEmail());
         String emailCode = redisService.get(emailRedisKey);
         if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
@@ -70,6 +67,25 @@ public class UserServiceImpl implements UserService {
         userPO.setImg("default");
         userPO.setPassword(Base64.encodeBase64String(userInfo.getUser().getPassword().getBytes()));
         userMapper.insertUser(userPO);
+        return true;
+    }
+
+    @Override
+    public Boolean checkRegisterParam(UserVO userVO) {
+        if (userVO.getEmail() != null && !userVO.getEmail().equals("")){
+            Integer count = userMapper.selectAccountCountByEmail(userVO.getEmail());
+            if (count > 0) {
+                logger.debug(DFLAG_USER_LOG+",登录参数校验，邮箱已存在，email: "+userVO.getEmail());
+                throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "邮箱已存在,请重新输入");
+            }
+        }
+        if (userVO.getUser().getName() != null && !userVO.getUser().getName().equals("")){
+            Integer count = userMapper.selectAccountCountByName(userVO.getUser().getName());
+            if (count > 0){
+                logger.debug(DFLAG_USER_LOG+",登录参数校验，用户昵称已存在，name: "+userVO.getUser().getName());
+                throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"名称已存在，请重新输入");
+            }
+        }
         return true;
     }
 

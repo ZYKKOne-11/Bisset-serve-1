@@ -6,7 +6,7 @@
 #    username: root
 #    password: Xjh@187acb1212
 server:
-  port: 8210
+  port: ${task.port}
 
 mybatis:
   mapper-locations: classpath*:/mapper/*.xml

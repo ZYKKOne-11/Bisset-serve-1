@@ -5,7 +5,6 @@ import com.xjh.common.model.ResultModel;
 import com.xjh.common.po.UserPO;
 import com.xjh.common.vo.UserVO;
 import com.xjh.core.service.user.UserService;
-import org.apache.catalina.User;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -25,6 +24,16 @@ public class UserController {
             Boolean res = userService.register(userInfo);
             return ResultModel.success(res);
         } catch (CommonException e) {
+            return ResultModel.fail(e);
+        }
+    }
+
+    @PostMapping("/check-param")
+    public ResultModel<Boolean> checkRegisterParam(@RequestBody UserVO userVO){
+        try{
+            Boolean res = userService.checkRegisterParam(userVO);
+            return ResultModel.success(res);
+        }catch (CommonException e){
             return ResultModel.fail(e);
         }
     }

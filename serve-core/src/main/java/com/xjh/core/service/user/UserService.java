@@ -17,6 +17,12 @@ public interface UserService {
     Boolean register(UserVO userInfo);
 
     /**
+     * 注册参数合理性校验
+     * @param userVO email name 校验
+     * @return
+     */
+    Boolean checkRegisterParam(UserVO userVO);
+    /**
      * 登录
      *
      * @param userInfo 登录信息

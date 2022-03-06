@@ -11,6 +11,7 @@
         <module>serve-common</module>
         <module>serve-task</module>
         <module>serve-core</module>
+        <module>server-hostel</module>
     </modules>
 
     <packaging>pom</packaging>
