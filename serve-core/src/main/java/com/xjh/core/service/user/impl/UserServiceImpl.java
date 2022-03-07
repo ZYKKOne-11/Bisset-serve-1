@@ -30,6 +30,7 @@ import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -108,6 +109,7 @@ public class UserServiceImpl implements UserService {
         }
         String token = TokenUtil.generateToken(userPO.getUserId(), request, response);
         SecurityUtils.setUserInfo(token, userPO, redisService);
+
         return userPO;
     }
 
@@ -188,6 +190,16 @@ public class UserServiceImpl implements UserService {
             return userInfo;
         } catch (Exception e) {
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "用户缓存信息失效，请重新登录");
+        }
+    }
+
+    @Override
+    public List<UserPO> selectUserList(List<Long> ids) {
+        try{
+            List<UserPO> res = userMapper.selectUserList(ids);
+            return res;
+        }catch (Exception e){
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"查询User_List异常，请稍后再试");
         }
     }
 

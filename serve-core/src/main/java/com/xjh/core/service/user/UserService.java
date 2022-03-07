@@ -6,6 +6,7 @@ import org.apache.catalina.User;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 public interface UserService {
     /**
@@ -50,4 +51,6 @@ public interface UserService {
     Boolean sendEmail(String emailName);
 
     UserPO query();
+
+    List<UserPO> selectUserList(List<Long> ids);
 }

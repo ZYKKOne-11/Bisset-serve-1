@@ -3,6 +3,8 @@ package com.xjh.core.mapper;
 import com.xjh.common.po.UserPO;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+
 public interface UserMapper {
     UserPO selectUserByEmail(@Param("email") String account);
 
@@ -19,4 +21,5 @@ public interface UserMapper {
     void updatePasswordById(@Param("userId") Long userId, @Param("password") String digestPassword);
 
 
+    List<UserPO> selectUserList(List<Long> ids);
 }

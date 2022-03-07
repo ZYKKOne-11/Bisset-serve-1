@@ -35,5 +35,12 @@
         select count(*) from user
         where name = #{name}  or  email = #{email}
     </select>
+    <select id="selectUserList" resultMap="BaseResultMap">
+        select * from user
+        where user_id in
+        <foreach collection="list" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
 
 </mapper>

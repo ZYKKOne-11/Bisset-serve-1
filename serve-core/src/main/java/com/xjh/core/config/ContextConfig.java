@@ -2,6 +2,7 @@ package com.xjh.core.config;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.github.pagehelper.PageHelper;
+import com.xjh.common.consts.HostelListConst;
 import com.xjh.common.exception.CommonErrorCode;
 import com.xjh.common.exception.CommonException;
 import com.xjh.common.utils.PropertyLoader;
@@ -136,5 +137,11 @@ public class ContextConfig {
         javaMailSender.setJavaMailProperties(javaMailProperties);
 
         return javaMailSender;
+    }
+
+    @Bean
+    public HostelListConst hostelListConst(){
+        HostelListConst hostelListConst = new HostelListConst();
+        return hostelListConst;
     }
 }
