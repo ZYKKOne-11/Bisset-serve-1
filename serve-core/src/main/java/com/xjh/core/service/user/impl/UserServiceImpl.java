@@ -73,21 +73,27 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Boolean checkRegisterParam(UserVO userVO) {
-        if (userVO.getEmail() != null && !userVO.getEmail().equals("")){
-            Integer count = userMapper.selectAccountCountByEmail(userVO.getEmail());
-            if (count > 0) {
-                logger.debug(DFLAG_USER_LOG+",登录参数校验，邮箱已存在，email: "+userVO.getEmail());
-                throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "邮箱已存在,请重新输入");
+        try{
+            if (userVO.getUser().getEmail() != null && !userVO.getUser().getEmail().equals("")){
+                Integer count = userMapper.selectAccountCountByEmail(userVO.getUser().getEmail());
+                if (count > 0) {
+                    logger.debug(DFLAG_USER_LOG+",登录参数校验，邮箱已存在，email: "+userVO.getEmail());
+                    return false;
+                }
             }
-        }
-        if (userVO.getUser().getName() != null && !userVO.getUser().getName().equals("")){
-            Integer count = userMapper.selectAccountCountByName(userVO.getUser().getName());
-            if (count > 0){
-                logger.debug(DFLAG_USER_LOG+",登录参数校验，用户昵称已存在，name: "+userVO.getUser().getName());
-                throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"名称已存在，请重新输入");
+            if (userVO.getUser().getName() != null && !userVO.getUser().getName().equals("")){
+                Integer count = userMapper.selectAccountCountByName(userVO.getUser().getName());
+                if (count > 0){
+                    logger.debug(DFLAG_USER_LOG+",登录参数校验，用户昵称已存在，name: "+userVO.getUser().getName());
+                    return false;
+                }
             }
+            return true;
+        }catch(Exception e){
+            //降级处理
+            logger.error("用户名称或邮箱校验异常");
+            return false;
         }
-        return true;
     }
 
     @Override

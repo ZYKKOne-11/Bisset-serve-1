@@ -34,7 +34,7 @@ public class UserController {
             Boolean res = userService.checkRegisterParam(userVO);
             return ResultModel.success(res);
         }catch (CommonException e){
-            return ResultModel.fail(e);
+            return ResultModel.success(false);
         }
     }
 

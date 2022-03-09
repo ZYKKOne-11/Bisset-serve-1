@@ -23,6 +23,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
         excludePath.add("/user/login");
         excludePath.add("/user/register");
         excludePath.add("/user/send-email");
+        excludePath.add("/user/check-param");
         excludePath.add("/web/#/login");
         excludePath.add("/hotspot/query");
 
