@@ -10,8 +10,11 @@
         <result property="img" column="img"/>
     </resultMap>
     <insert id="insertUser">
-        insert into user(name,password,email)
-        values(#{name},#{password},#{email})
+        insert into user(name,password,email,img)
+        values(#{name},#{password},#{email},#{img})
+        <selectKey keyProperty="userId" resultType="Long" order="AFTER">
+            SELECT LAST_INSERT_ID();
+        </selectKey>
     </insert>
     <update id="updatePasswordById">
         update user

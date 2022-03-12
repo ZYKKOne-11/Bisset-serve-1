@@ -1,8 +1,10 @@
 package com.xjh.core.service.user.impl;
 
+import com.xjh.common.consts.HostelConstant;
 import com.xjh.common.exception.CommonErrorCode;
 import com.xjh.common.exception.CommonException;
 import com.xjh.common.po.UserPO;
+import com.xjh.common.utils.HostelRankingUtils;
 import com.xjh.common.utils.PropertyLoader;
 import com.xjh.common.utils.security.DigestUtil;
 import com.xjh.common.vo.UserVO;
@@ -18,6 +20,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -29,10 +32,7 @@ import javax.annotation.Resource;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,16 +59,22 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Boolean register(UserVO userInfo) {
-        UserPO userPO = userInfo.getUser();
-        String emailRedisKey = getEmailRedisKey(userPO.getEmail());
-        String emailCode = redisService.get(emailRedisKey);
-        if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
-            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误或失效，请再试一次");
+        try {
+            UserPO userPO = userInfo.getUser();
+            String emailRedisKey = getEmailRedisKey(userPO.getEmail());
+            String emailCode = redisService.get(emailRedisKey);
+            if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
+                throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误或失效，请再试一次");
+            }
+            userPO.setImg("default");
+            userPO.setPassword(Base64.encodeBase64String(userInfo.getUser().getPassword().getBytes()));
+            userMapper.insertUser(userPO);
+            userExecAddScore(String.valueOf(userPO.getUserId()), HostelConstant.USER_REGISTER_SCORE);
+            return true;
+        }catch (Exception e){
+            logger.error("用户注册失败，User："+userInfo.toString());
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,e.getMessage());
         }
-        userPO.setImg("default");
-        userPO.setPassword(Base64.encodeBase64String(userInfo.getUser().getPassword().getBytes()));
-        userMapper.insertUser(userPO);
-        return true;
     }
 
     @Override
@@ -115,7 +121,7 @@ public class UserServiceImpl implements UserService {
         }
         String token = TokenUtil.generateToken(userPO.getUserId(), request, response);
         SecurityUtils.setUserInfo(token, userPO, redisService);
-
+        userExecAddScore(String.valueOf(userPO.getUserId()), HostelConstant.USER_REGISTER_SCORE);
         return userPO;
     }
 
@@ -244,4 +250,21 @@ public class UserServiceImpl implements UserService {
         boolean isMatch = Pattern.matches(pattern, content);
         return isMatch;
     }
+
+    private Boolean userExecAddScore(String userId,Double score){
+        try{
+            String overAllKey = RedisKeyCenter.getUserOverAllRankingRedisKey();
+            String monthKey = RedisKeyCenter.getUserMonthRankingRedisKey(String.valueOf(HostelRankingUtils.getNowNumberMonth(System.currentTimeMillis())));
+            String weekKey = RedisKeyCenter.getUserWeekRankingRedisKey(String.valueOf(HostelRankingUtils.getNowNumberWeek(System.currentTimeMillis())));
+            ZSetOperations zSet = redisService.getRedisTemplate().opsForZSet();
+            zSet.incrementScore(overAllKey,userId,score);
+            zSet.incrementScore(monthKey,userId,score);
+            zSet.incrementScore(weekKey,userId,score);
+            logger.info("userId: "+userId+", 排行榜积分增加: "+score.toString()+",当前总分数为: "+zSet.score(overAllKey,userId).toString());
+            return true;
+        }catch (Exception e){
+            return false;
+        }
+    }
+
 }

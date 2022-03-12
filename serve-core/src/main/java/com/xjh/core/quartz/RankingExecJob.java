@@ -16,10 +16,7 @@ import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ZSetOperations;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class RankingExecJob implements Job {
 
@@ -36,7 +33,6 @@ public class RankingExecJob implements Job {
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-        //TODO 排行榜定时任务
         try{
             logger.info("排行榜定时任务开始执行");
             //更新总排行榜缓存
@@ -50,17 +46,25 @@ public class RankingExecJob implements Job {
             forZSet = redisService.getRedisTemplate().opsForZSet();
             list = iteratorZSet(forZSet, key);
             res = getUserList(list);
-            hostelListConst.setOverAllRankingList(res);
+            hostelListConst.setMonthRankingList(res);
             //更新周排行榜缓存
-            key = RedisKeyCenter.getUserMonthRankingRedisKey(String.valueOf(HostelRankingUtils.getNowNumberWeek(System.currentTimeMillis())));
+            key = RedisKeyCenter.getUserWeekRankingRedisKey(String.valueOf(HostelRankingUtils.getNowNumberWeek(System.currentTimeMillis())));
             forZSet = redisService.getRedisTemplate().opsForZSet();
             list = iteratorZSet(forZSet, key);
             res = getUserList(list);
-            hostelListConst.setOverAllRankingList(res);
+            hostelListConst.setWeekRankingList(res);
             logger.info("排行榜定时任务执行完毕");
         }catch (Exception e){
             //降级处理
             logger.error("排行榜定时任务执行失败");
+        }
+    }
+
+    private void print(Set range){
+        Iterator iterator = range.iterator();
+        while (iterator.hasNext()){
+            String next = (String)iterator.next();
+            System.out.println(next);
         }
     }
 
@@ -80,10 +84,13 @@ public class RankingExecJob implements Job {
 
     private List<Long> iteratorZSet(ZSetOperations opsForZSet,String key){
         List<Long> res = new ArrayList<>();
-        Cursor<ZSetOperations.TypedTuple<Object>> scan = opsForZSet.scan(key, ScanOptions.NONE);
-        while (scan.hasNext()){
-            ZSetOperations.TypedTuple<Object> item = scan.next();
-            Long userId = Long.parseLong(String.valueOf(item.getValue()));
+        Iterator iterator = opsForZSet.reverseRange(key, 0, -1).iterator();
+        while (iterator.hasNext()){
+            String item = (String)iterator.next();
+            if (item == null || item.equals("") || item.equals("null")){
+                continue;
+            }
+            Long userId = Long.parseLong(item);
             res.add(userId);
         }
         logger.info("遍历key= "+key+" 的zSet,userId 集合为："+res.toString());

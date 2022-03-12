@@ -16,7 +16,7 @@ public interface UserMapper {
 
     Integer selectAccountCountByNameEmail(@Param("name") String name,@Param("email") String email);
 
-    void insertUser(UserPO userInfo);
+    Long insertUser(UserPO userInfo);
 
     void updatePasswordById(@Param("userId") Long userId, @Param("password") String digestPassword);
 

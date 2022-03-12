@@ -6,13 +6,15 @@ import com.xjh.common.model.ResultModel;
 import com.xjh.common.po.UserPO;
 import com.xjh.core.service.hostel.HostelService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
 
-@RestController("/hostel")
+@RestController
+@RequestMapping("/hostel")
 public class HostelController {
 
     @Resource

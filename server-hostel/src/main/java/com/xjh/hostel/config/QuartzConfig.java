@@ -5,14 +5,19 @@ import com.xjh.core.quartz.RankingExecJob;
 import org.quartz.JobDetail;
 import org.quartz.Trigger;
 import org.quartz.spi.JobFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.scheduling.quartz.CronTriggerFactoryBean;
 import org.springframework.scheduling.quartz.JobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
 import javax.sql.DataSource;
@@ -43,7 +48,7 @@ public class QuartzConfig {
         factory.setTriggers(triggers);
         factory.setTransactionManager(transactionManager);
         factory.setTaskExecutor(new ThreadPoolExecutor(10, 100, 30L, TimeUnit.SECONDS, new LinkedBlockingQueue(200)));
-        //factory.setConfigLocation(new FileSystemResource(this.getClass().getResource("/quartz.properties").getPath()));
+        factory.setConfigLocation(new ClassPathResource(("quartz.properties")));
         factory.setWaitForJobsToCompleteOnShutdown(true);
         factory.setOverwriteExistingJobs(true);
         return factory;
