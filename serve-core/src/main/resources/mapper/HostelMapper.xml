@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.xjh.core.mapper.HostelMapper">
+    <resultMap id="BaseResultShare" type="share">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="details" column="details"/>
+        <result property="img" column="img"/>
+        <result property="isDiscuss" column="is_discuss"/>
+        <result property="isReviewed" column="is_reviewed"/>
+    </resultMap>
+    <insert id="insertUserShare">
+        insert into user_share(title,details,img,is_discuss,is_reviewed)
+        values(#{title},#{details},#{img},#{isDiscuss},#{isReviewed})
+    </insert>
 </mapper>

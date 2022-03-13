@@ -26,16 +26,17 @@ public class WebMVCConfig implements WebMvcConfigurer {
         excludePath.add("/user/check-param");
         excludePath.add("/web/#/login");
         excludePath.add("/hotspot/query");
+        excludePath.add("/hostel/rank/query");
 
-        excludePath.add("**/*.gif");
-        excludePath.add("**/*.jpg");
-        excludePath.add("**/*.jpeg");
-        excludePath.add("**/*.png");
-        excludePath.add("**/*.bmp");
-        excludePath.add("**/*.swf");
-        excludePath.add("**/*.ico");
-        excludePath.add("**/*.css");
-        excludePath.add("**/*.js");
+        excludePath.add("/**/*.gif");
+        excludePath.add("/**/*.jpg");
+        excludePath.add("/**/*.jpeg");
+        excludePath.add("/**/*.png");
+        excludePath.add("/**/*.bmp");
+        excludePath.add("/**/*.swf");
+        excludePath.add("/**/*.ico");
+        excludePath.add("/**/*.css");
+        excludePath.add("/**/*.js");
         excludePath.add("/**/error");
         registry.addInterceptor(loginInterceptor).addPathPatterns("/**").excludePathPatterns(excludePath);
     }

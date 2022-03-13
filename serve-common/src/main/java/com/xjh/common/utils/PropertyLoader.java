@@ -111,6 +111,11 @@ public class PropertyLoader {
             logger.warn("healthcheck.properties", e.getMessage());
         });
         Try.run(() -> {
+            properties.putAll(loadProperties("common.properties"));
+        }).onFailure((e) -> {
+            logger.warn("common.properties", e.getMessage());
+        });
+        Try.run(() -> {
             properties.putAll(loadProperties("db.properties"));
         }).onFailure((e) -> {
             logger.warn("db.properties", e.getMessage());

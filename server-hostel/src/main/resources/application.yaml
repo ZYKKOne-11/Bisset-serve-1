@@ -1,2 +1,14 @@
 server:
   port: 8220
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB     #单个最大文件大小，默认是1MB
+      max-request-size: 100MB   #总请求文件大小
+  resources:
+    static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/,file:${web.upload-path}
+
+  mvc:
+    static-path-pattern: ${web.upload-path}/**
+web:
+  upload-path: /home/admin/static
