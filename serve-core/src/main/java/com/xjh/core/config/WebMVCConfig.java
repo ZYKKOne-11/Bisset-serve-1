@@ -28,6 +28,9 @@ public class WebMVCConfig implements WebMvcConfigurer {
         excludePath.add("/hotspot/query");
         excludePath.add("/hostel/rank/query");
 
+        excludePath.add("/hostel/share/query");
+        excludePath.add("/hostel/discuss/query");
+
         excludePath.add("/**/*.gif");
         excludePath.add("/**/*.jpg");
         excludePath.add("/**/*.jpeg");

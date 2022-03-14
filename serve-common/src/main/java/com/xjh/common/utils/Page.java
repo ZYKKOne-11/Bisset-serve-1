@@ -20,6 +20,14 @@ public class Page<T> {
 
     private Integer totalSize;//总记录条数
 
+    public Page(List<T> data, Integer pageNumber, Integer pageSize, Integer count){
+        this.data = data;
+        this.pageNumber = pageNumber;
+        this.pageSize = pageSize;
+        this.totalNumber = count / pageSize + (count % pageSize == 0 ? 0 : 1);
+        this.totalSize = count;
+    }
+
     public Page(Integer pageNumber, Integer pageSize, Integer totalNumber, Integer totalSize) {
         this.pageNumber = pageNumber;
         this.pageSize = pageSize;

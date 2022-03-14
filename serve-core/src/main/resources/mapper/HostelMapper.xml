@@ -90,9 +90,16 @@
     <select id="selectUserShareInfo" resultMap="BaseResultUserShare">
         select <include refid="UserShareColumnSQL"/>
         from user,user_share,share
-        where share.is_discuss = 1 and is_reviewed = 1
+        where share.is_reviewed = 1
         and user.user_id = user_share.user_id and share.id = user_share.share_id
         order by share.create_time desc
+    </select>
+
+    <select id="selectUserShareCount" resultType="java.lang.Integer">
+        select count(*)
+        from user,user_share,share
+        where share.is_reviewed = 1
+        and user.user_id = user_share.user_id and share.id = user_share.share_id
     </select>
 
     <select id="selectUserDiscussInfo" resultMap="BaseResultUserDiscuss">
@@ -101,5 +108,12 @@
         where share_discuss.share_id = #{shareId} and discuss.state = 0
         and user.user_id = user_discuss.user_id and discuss.id = user_discuss.discuss_id and share_discuss.discuss_id = discuss.id
         order by discuss.create_time desc
+    </select>
+
+    <select id="selectUserDiscussCount" resultType="java.lang.Integer">
+        select count(*)
+        from user,user_discuss,discuss,share_discuss
+        where share_discuss.share_id = #{shareId} and discuss.state = 0
+        and user.user_id = user_discuss.user_id and discuss.id = user_discuss.discuss_id and share_discuss.discuss_id = discuss.id
     </select>
 </mapper>

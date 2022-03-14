@@ -23,4 +23,8 @@ public interface HostelMapper {
     Integer insertUserDiscuss(@Param("userId") Long userId, @Param("discussId") Long discussId);
 
     Integer insertShareDiscuss(@Param("shareId") Long shareId, @Param("discussId") Long discussId);
+
+    Integer selectUserShareCount(HostelVO hostelVO);
+
+    Integer selectUserDiscussCount(@Param("shareId")Long shareId);
 }

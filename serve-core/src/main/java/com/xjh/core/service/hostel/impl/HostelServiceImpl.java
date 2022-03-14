@@ -90,9 +90,8 @@ public class HostelServiceImpl implements HostelService {
         try {
             PageHelper.startPage(hostelVO.getNumber(),hostelVO.getSize());
             List<UserSharePO> data = hostelMapper.selectUserShareInfo(hostelVO);
-            Integer count = data == null ? 0 : data.size();
-            Page<UserSharePO> page = new Page<>(hostelVO.getNumber(),hostelVO.getSize(),count/hostelVO.getSize()+1,count);
-            page.setData(data);
+            Integer count = hostelMapper.selectUserShareCount(hostelVO);
+            Page<UserSharePO> page = new Page<>(data, hostelVO.getNumber(), hostelVO.getSize(), count);
             return page;
         }catch (Exception e){
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"查询分享信息列表异常");
@@ -104,9 +103,8 @@ public class HostelServiceImpl implements HostelService {
         try {
             PageHelper.startPage(hostelVO.getNumber(),hostelVO.getSize());
             List<UserDiscussPO> data = hostelMapper.selectUserDiscussInfo(hostelVO.getShare().getId());
-            Integer count = data == null ? 0 : data.size();
-            Page<UserDiscussPO> page = new Page<>(hostelVO.getNumber(),hostelVO.getSize(),count/hostelVO.getSize()+1,count);
-            page.setData(data);
+            Integer count = hostelMapper.selectUserDiscussCount(hostelVO.getShare().getId());
+            Page<UserDiscussPO> page = new Page<>(data, hostelVO.getNumber(), hostelVO.getSize(), count);
             return page;
         }catch (Exception e){
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"查询分享信息评论列表异常");
