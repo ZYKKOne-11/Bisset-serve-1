@@ -1,5 +1,11 @@
 package com.xjh.core.service.hostel.impl;
 
+import com.github.houbb.sensitive.word.bs.SensitiveWordBs;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+import com.xjh.common.bean.Discuss;
+import com.xjh.common.po.UserDiscussPO;
+import com.xjh.common.po.UserSharePO;
 import com.xjh.common.utils.Base64ToMultipartFileUtil;
 import com.xjh.common.bean.Share;
 import com.xjh.common.consts.HostelListConst;
@@ -7,8 +13,10 @@ import com.xjh.common.enums.RankingTypeEnum;
 import com.xjh.common.exception.CommonErrorCode;
 import com.xjh.common.exception.CommonException;
 import com.xjh.common.po.UserPO;
+import com.xjh.common.utils.Page;
 import com.xjh.common.utils.PropertyLoader;
 import com.xjh.common.vo.HostelVO;
+import com.xjh.core.interceptor.token.SecurityUtils;
 import com.xjh.core.mapper.HostelMapper;
 import com.xjh.core.service.hostel.HostelService;
 import org.apache.commons.lang3.StringUtils;
@@ -68,11 +76,68 @@ public class HostelServiceImpl implements HostelService {
             //TODO 暂时默认通过管理员审核
             share.setIsReviewed(1);
             logger.info("添加思维导图分享信息：param: "+share.toString());
-            Integer res = hostelMapper.insertUserShare(share);
+            Integer res = hostelMapper.insertShare(share);
+            hostelMapper.insertUserShare(SecurityUtils.getUserId(),share.getId());
             return res == 1;
         }catch (Exception e){
             logger.error("分享思维导图异常，异常信息："+e.getMessage());
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"分享学习思维导图异常，请稍后重试");
+        }
+    }
+
+    @Override
+    public Page<UserSharePO> selectUserShareInfo(HostelVO hostelVO) {
+        try {
+            PageHelper.startPage(hostelVO.getNumber(),hostelVO.getSize());
+            List<UserSharePO> data = hostelMapper.selectUserShareInfo(hostelVO);
+            Integer count = data == null ? 0 : data.size();
+            Page<UserSharePO> page = new Page<>(hostelVO.getNumber(),hostelVO.getSize(),count/hostelVO.getSize()+1,count);
+            page.setData(data);
+            return page;
+        }catch (Exception e){
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"查询分享信息列表异常");
+        }
+    }
+
+    @Override
+    public Page<UserDiscussPO> selectUserDiscussInfo(HostelVO hostelVO) {
+        try {
+            PageHelper.startPage(hostelVO.getNumber(),hostelVO.getSize());
+            List<UserDiscussPO> data = hostelMapper.selectUserDiscussInfo(hostelVO.getShare().getId());
+            Integer count = data == null ? 0 : data.size();
+            Page<UserDiscussPO> page = new Page<>(hostelVO.getNumber(),hostelVO.getSize(),count/hostelVO.getSize()+1,count);
+            page.setData(data);
+            return page;
+        }catch (Exception e){
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"查询分享信息评论列表异常");
+        }
+    }
+
+    @Override
+    public Boolean publishDiscussByShare(HostelVO hostelVO) {
+        Discuss discuss = hostelVO.getDiscuss();
+        UserPO user = SecurityUtils.getUserInfo();
+        try{
+            discuss.setCreateTime(new Date());
+            //判断评论是否存在铭感词
+            /* TODO 敏感词校验
+            if (SensitiveWordBs.newInstance().contains(discuss.getDetail())) {
+                //疑似存在敏感词
+                logger.info("名称： "+user.getName()+" 的用户，存在敏感发言，发表言论为："+discuss.getDetail());
+                discuss.setState(2);
+            }else {
+                //合法发言
+                logger.info("名称： "+user.getName()+" 的用户，言论良好，发表言论为："+discuss.getDetail());
+                discuss.setState(0);
+            }*/
+            discuss.setState(0);
+            hostelMapper.insertDiscuss(discuss);
+            hostelMapper.insertShareDiscuss(hostelVO.getShare().getId(),discuss.getId());
+            hostelMapper.insertUserDiscuss(user.getUserId(),discuss.getId());
+            return true;
+        }catch (Exception e){
+            logger.error("userId= "+user.getUserId()+"发表评论："+discuss.getDetail()+"异常，异常信息："+e.getMessage());
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"用户发表言论异常");
         }
     }
 

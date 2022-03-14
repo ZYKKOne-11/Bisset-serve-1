@@ -9,8 +9,97 @@
         <result property="isDiscuss" column="is_discuss"/>
         <result property="isReviewed" column="is_reviewed"/>
     </resultMap>
-    <insert id="insertUserShare">
-        insert into user_share(title,details,img,is_discuss,is_reviewed)
+
+    <resultMap id="BaseResultUserShare" type="com.xjh.common.po.UserSharePO">
+        <id property="id" column="id"/>
+        <association property="user" javaType="com.xjh.common.po.UserPO">
+            <id property="userId" column="user_id"/>
+            <result property="name" column="name"/>
+            <result property="tag" column="tag"/>
+            <result property="password" column="password" />
+            <result property="email" column="email"/>
+            <result property="img" column="img"/>
+        </association>
+        <association property="share" javaType="share">
+            <id property="id" column="id"/>
+            <result property="title" column="title"/>
+            <result property="details" column="details"/>
+            <result property="img" column="share_img"/>
+            <result property="isDiscuss" column="is_discuss"/>
+            <result property="isReviewed" column="is_reviewed"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="BaseResultUserDiscuss" type="com.xjh.common.po.UserDiscussPO">
+        <id property="id" column="user_discuss_id"/>
+        <association property="user" javaType="com.xjh.common.po.UserPO">
+            <id property="userId" column="user_id"/>
+            <result property="name" column="name"/>
+            <result property="tag" column="tag"/>
+            <result property="password" column="password" />
+            <result property="email" column="email"/>
+            <result property="img" column="img"/>
+        </association>
+        <association property="discuss" javaType="discuss">
+            <id property="id" column="d_id"/>
+            <result property="detail" column="detail"/>
+            <result property="state" column="state"/>
+            <result property="createTime" column="create_time"/>
+        </association>
+    </resultMap>
+
+    <sql id="UserShareColumnSQL" >
+        user.user_id,user.name,user.tag,user.email,user.img,
+        share.id,share.title,share.details,share.img as share_img,share.is_discuss,share.is_reviewed
+    </sql>
+
+    <sql id="UserDiscussColumnSQL" >
+        user_discuss.id as user_discuss_id,user.user_id,user.name,user.tag,user.email,user.img,
+        discuss.id as d_id,discuss.detail,discuss.state,discuss.create_time
+    </sql>
+
+    <insert id="insertShare">
+        insert into share(title,details,img,is_discuss,is_reviewed)
         values(#{title},#{details},#{img},#{isDiscuss},#{isReviewed})
+        <selectKey keyProperty="id" resultType="Long" order="AFTER">
+            SELECT LAST_INSERT_ID();
+        </selectKey>
     </insert>
+    <insert id="insertUserShare">
+        insert into user_share(user_id,share_id)
+        values(#{userId},#{shareId})
+    </insert>
+    <insert id="insertDiscuss">
+        insert into discuss(detail,state,create_time)
+        values(#{detail},#{state},#{createTime})
+        <selectKey keyProperty="id" resultType="Long" order="AFTER">
+            SELECT LAST_INSERT_ID();
+        </selectKey>
+    </insert>
+
+    <insert id="insertUserDiscuss">
+        insert into user_discuss(user_id,discuss_id)
+        values(#{userId},#{discussId})
+    </insert>
+    <insert id="insertShareDiscuss">
+        insert into share_discuss(share_id,discuss_id)
+        values(#{shareId},#{discussId})
+    </insert>
+
+
+    <select id="selectUserShareInfo" resultMap="BaseResultUserShare">
+        select <include refid="UserShareColumnSQL"/>
+        from user,user_share,share
+        where share.is_discuss = 1 and is_reviewed = 1
+        and user.user_id = user_share.user_id and share.id = user_share.share_id
+        order by share.create_time desc
+    </select>
+
+    <select id="selectUserDiscussInfo" resultMap="BaseResultUserDiscuss">
+        select <include refid="UserDiscussColumnSQL"/>
+        from user,user_discuss,discuss,share_discuss
+        where share_discuss.share_id = #{shareId} and discuss.state = 0
+        and user.user_id = user_discuss.user_id and discuss.id = user_discuss.discuss_id and share_discuss.discuss_id = discuss.id
+        order by discuss.create_time desc
+    </select>
 </mapper>

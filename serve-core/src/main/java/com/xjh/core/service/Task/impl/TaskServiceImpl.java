@@ -88,7 +88,10 @@ public class TaskServiceImpl implements TaskService {
             taskMapper.updatePlan(planTaskPO);
             List<Task> tasks = planTaskPO.getTasks();
             tasks.stream().forEach(t -> {
-                t.setCreateTime(new Date());
+                if (t.getCreateTime() == null){
+                    t.setCreateTime(new Date());
+                }
+                t.setPlanId(planTaskPO.getId());
             });
             taskMapper.deleteTask(planTaskPO.getId());
             taskMapper.insertTask(tasks);

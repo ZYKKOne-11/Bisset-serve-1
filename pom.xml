@@ -120,6 +120,14 @@
                 <artifactId>snakeyaml</artifactId>
                 <version>1.25</version>
             </dependency>
+
+            <!--评论铭感词校验-->
+            <dependency>
+                <groupId>com.github.houbb</groupId>
+                <artifactId>sensitive-word</artifactId>
+                <version>0.0.4</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
