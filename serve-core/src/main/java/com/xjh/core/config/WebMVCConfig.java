@@ -33,6 +33,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
 
         excludePath.add("/**/*.gif");
         excludePath.add("/**/*.jpg");
+        excludePath.add("/**/*.JPG");
         excludePath.add("/**/*.jpeg");
         excludePath.add("/**/*.png");
         excludePath.add("/**/*.bmp");

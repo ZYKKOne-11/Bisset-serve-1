@@ -1,6 +1,8 @@
 package com.xjh.core.service.user.impl;
 
+import com.xjh.common.bean.Share;
 import com.xjh.common.consts.HostelConstant;
+import com.xjh.common.enums.UserChangeReqTypeEnum;
 import com.xjh.common.exception.CommonErrorCode;
 import com.xjh.common.exception.CommonException;
 import com.xjh.common.po.UserPO;
@@ -27,11 +29,15 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import javax.annotation.Resource;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -46,6 +52,9 @@ public class UserServiceImpl implements UserService {
     private String emailSubject = PropertyLoader.getProperty("mail.subject");
     private String emailFromUserName = PropertyLoader.getProperty("mail.from.username");
 
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd/");
+    private String  uploadPath = PropertyLoader.getProperty("user.img.upload.path");
+    private static final Long UPLOAD_FILE_MAX_SIZE = PropertyLoader.getLongProperty("upload.file.max.size");
     @Resource
     UserMapper userMapper;
 
@@ -61,41 +70,36 @@ public class UserServiceImpl implements UserService {
     public Boolean register(UserVO userInfo) {
         try {
             UserPO userPO = userInfo.getUser();
-            String emailRedisKey = getEmailRedisKey(userPO.getEmail());
-            String emailCode = redisService.get(emailRedisKey);
-            if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
-                throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误或失效，请再试一次");
-            }
-            userPO.setImg("default");
-            userPO.setPassword(Base64.encodeBase64String(userInfo.getUser().getPassword().getBytes()));
+            checkEmailCode(userInfo);
+            userPO.setPassword(Base64.encodeBase64String(userPO.getPassword().getBytes()));
             userMapper.insertUser(userPO);
             userExecAddScore(String.valueOf(userPO.getUserId()), HostelConstant.USER_REGISTER_SCORE);
             return true;
-        }catch (Exception e){
-            logger.error("用户注册失败，User："+userInfo.toString());
-            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,e.getMessage());
+        } catch (Exception e) {
+            logger.error("用户注册失败，User：" + userInfo.toString());
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, e.getMessage());
         }
     }
 
     @Override
     public Boolean checkRegisterParam(UserVO userVO) {
-        try{
-            if (userVO.getUser().getEmail() != null && !userVO.getUser().getEmail().equals("")){
+        try {
+            if (userVO.getUser().getEmail() != null && !userVO.getUser().getEmail().equals("")) {
                 Integer count = userMapper.selectAccountCountByEmail(userVO.getUser().getEmail());
                 if (count > 0) {
-                    logger.debug(DFLAG_USER_LOG+",登录参数校验，邮箱已存在，email: "+userVO.getEmail());
+                    logger.debug(DFLAG_USER_LOG + ",登录参数校验，邮箱已存在，email: " + userVO.getEmail());
                     return false;
                 }
             }
-            if (userVO.getUser().getName() != null && !userVO.getUser().getName().equals("")){
+            if (userVO.getUser().getName() != null && !userVO.getUser().getName().equals("")) {
                 Integer count = userMapper.selectAccountCountByName(userVO.getUser().getName());
-                if (count > 0){
-                    logger.debug(DFLAG_USER_LOG+",登录参数校验，用户昵称已存在，name: "+userVO.getUser().getName());
+                if (count > 0) {
+                    logger.debug(DFLAG_USER_LOG + ",登录参数校验，用户昵称已存在，name: " + userVO.getUser().getName());
                     return false;
                 }
             }
             return true;
-        }catch(Exception e){
+        } catch (Exception e) {
             //降级处理
             logger.error("用户名称或邮箱校验异常");
             return false;
@@ -126,31 +130,69 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Boolean changePassword(String oldPassword, String newPassword, HttpServletRequest req) {
+    public Boolean logout(HttpServletRequest request) {
         try {
-            Long userId = SecurityUtils.getUserId();
-            UserPO userInfo = SecurityUtils.getUserInfo();
-            String oldPas = userInfo.getPassword();
-            String decodePassword = StringUtils.newStringUsAscii(Base64.decodeBase64(oldPas));
-            if (!decodePassword.equals(oldPassword)) {
-                throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "旧密码不正确，请重新输入");
+            String userToken = TokenUtil.checkAndReturnToken(request);
+            if (userToken != null) {
+                String redisKey = RedisKeyCenter.getUserLoginInfoRedisKey(userToken);
+                redisService.delete(redisKey);
+                return true;
             }
-            newPassword = Base64.encodeBase64String(newPassword.getBytes());
-            userInfo.setPassword(newPassword);
-            userMapper.updatePasswordById(userId, newPassword);
-            String token = TokenUtil.getToken(req);
-            String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
-            redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
-            return true;
+            return false;
         } catch (Exception e) {
-            logger.error("修改密码异常，err: " + e.getMessage());
-            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "修改密码失败，请重试");
+            logger.error("Id: " + SecurityUtils.getUserId() + "的用户退出登录失败，异常信息：" + e.getMessage());
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "退出登录异常，请稍后重试");
         }
     }
 
     @Override
-    public Boolean changeUserEmail(UserPO userInfo) {
-        return null;
+    public Boolean change(UserVO userVO, HttpServletRequest req) {
+        try{
+            UserPO user = SecurityUtils.getUserInfo();
+            userVO.setUser(user);
+            checkChangeParam(userVO);
+            switch (userVO.getReqType()){
+                case CHANGE_USER_NAME:
+                    changeUserName(userVO,req);
+                    break;
+                case CHANGE_USER_PASSWORD:
+                    changePassword(userVO,req);
+                    break;
+                case CHANGE_USER_EMAIL:
+                    changeUserEmail(userVO,req);
+                    break;
+                case CHANGE_USER_TAG:
+                    changeUserTag(userVO,req);
+                    break;
+                default:
+                    return false;
+            }
+            return true;
+        }catch (Exception e){
+            logger.error("修改用户信息失败，userVo="+userVO.toString());
+            throw new CommonException(CommonErrorCode.SERVER_POWER_LESS,"修改失败，操作类型为："+userVO.getReqType().getDesc());
+        }
+    }
+
+    @Override
+    public Boolean uploadImg(HttpServletRequest request) {
+        try {
+            MultipartHttpServletRequest multipartHttpServletRequest=(MultipartHttpServletRequest)(request);
+            MultipartFile uploadFile=multipartHttpServletRequest.getFile("img");
+            if (uploadFile.isEmpty()){
+                throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"上传的文件为空");
+            }
+            String uploadFilePath = uploadFiles(uploadFile, request);
+            UserPO user = SecurityUtils.getUserInfo();
+            user.setImg(uploadFilePath);
+            userMapper.updateImgById(user.getUserId(),uploadFilePath);
+            String token = TokenUtil.getToken(request);
+            String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
+            redisService.set(userLoginInfoRedisKey, user, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+            return true;
+        }catch (Exception e){
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"上传用户头像失败，请稍后重试");
+        }
     }
 
     @Override
@@ -207,14 +249,98 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserPO> selectUserList(List<Long> ids) {
-        try{
+        try {
             List<UserPO> res = userMapper.selectUserList(ids);
             return res;
-        }catch (Exception e){
-            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"查询User_List异常，请稍后再试");
+        } catch (Exception e) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "查询User_List异常，请稍后再试");
         }
     }
 
+    /**
+     * 用户修改操作入参合法性校验
+     * @param userVO
+     */
+    private void checkChangeParam(UserVO userVO){
+        if (userVO.getReqType() == null){
+            userVO.setReqType(UserChangeReqTypeEnum.CHANGE_USER_UNSAFE);
+            throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"入参操作类型不可为空");
+        }
+        switch (userVO.getReqType()){
+            case CHANGE_USER_NAME:
+                Integer nameCount = userMapper.selectAccountCountByName(userVO.getNewName());
+                if (nameCount == null || nameCount != 0){
+                    throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"您修改的名称已存在");
+                }
+                break;
+            case CHANGE_USER_PASSWORD:
+                checkEmailCode(userVO);
+                String originPassword = userVO.getUser().getPassword();
+                String decodePassword = StringUtils.newStringUsAscii(Base64.decodeBase64(originPassword));
+                if (!decodePassword.equals(userVO.getOldPassword())) {
+                    throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "旧密码不正确，请重新输入");
+                }
+                break;
+            case CHANGE_USER_EMAIL:
+                userVO.getUser().setEmail(userVO.getNewEmail());
+                checkEmailCode(userVO);
+                Integer emailCount = userMapper.selectAccountCountByEmail(userVO.getEmail());
+                if (emailCount == null || emailCount != 0){
+                    throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"您修改的邮箱已存在");
+                }
+
+                if (!isEmail(userVO.getNewEmail())){
+                    throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"新的邮箱格式不合法");
+                }
+                break;
+            default:
+                throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"数据参数校验异常");
+        }
+    }
+    private Boolean changePassword(UserVO userVO, HttpServletRequest req) {
+        UserPO userInfo = userVO.getUser();
+        Long userId = SecurityUtils.getUserId();
+        String newPassword = Base64.encodeBase64String(userVO.getNewPassword().getBytes());
+        userInfo.setPassword(newPassword);
+        userMapper.updatePasswordById(userId, newPassword);
+        String token = TokenUtil.getToken(req);
+        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
+        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        return true;
+    }
+
+    private Boolean changeUserEmail(UserVO userVO, HttpServletRequest req) {
+        UserPO userInfo = userVO.getUser();
+        Long userId = SecurityUtils.getUserId();
+        userInfo.setEmail(userVO.getNewEmail());
+        userMapper.updateEmailById(userId, userVO.getNewEmail());
+        String token = TokenUtil.getToken(req);
+        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
+        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        return true;
+    }
+
+    private Boolean changeUserName(UserVO userVO, HttpServletRequest req){
+        UserPO userInfo = userVO.getUser();
+        Long userId = SecurityUtils.getUserId();
+        userInfo.setName(userVO.getNewName());
+        userMapper.updateNameById(userId, userVO.getNewName());
+        String token = TokenUtil.getToken(req);
+        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
+        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        return true;
+    }
+
+    private Boolean changeUserTag(UserVO userVO,HttpServletRequest req){
+        UserPO userInfo = userVO.getUser();
+        Long userId = SecurityUtils.getUserId();
+        userInfo.setTag(userVO.getTag().toString());
+        userMapper.updateTagById(userId, userVO.getTag().toString());
+        String token = TokenUtil.getToken(req);
+        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
+        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        return true;
+    }
     private String verifyCode(int n) {
         Random r = new Random();
         StringBuffer sb = new StringBuffer();
@@ -231,6 +357,20 @@ public class UserServiceImpl implements UserService {
         return userEmailInfoRedisKey;
     }
 
+    private void checkEmailCode(UserVO userInfo){
+        String token = Base64.encodeBase64String(userInfo.getUser().getEmail().getBytes());
+        String emailRedisKey = RedisKeyCenter.getUserEmailInfoRedisKey(token);
+        String emailCode = redisService.get(emailRedisKey);
+        if (emailCode == null || !emailCode.equals(userInfo.getCode())) {
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "邮箱验证码错误或失效，请再试一次");
+        }
+    }
+
+    /**
+     * 邮箱时效性验证
+     * @param emailName
+     * @return
+     */
     private Boolean checkEmailParam(String emailName) {
         String token = Base64.encodeBase64String(emailName.getBytes());
         String userEmailInfoRedisKey = RedisKeyCenter.getUserEmailTimeInfoRediskey(token);
@@ -251,20 +391,67 @@ public class UserServiceImpl implements UserService {
         return isMatch;
     }
 
-    private Boolean userExecAddScore(String userId,Double score){
-        try{
+    /**
+     * 用户积分增加操作
+     * @param userId
+     * @param score
+     * @return
+     */
+    private Boolean userExecAddScore(String userId, Double score) {
+        try {
             String overAllKey = RedisKeyCenter.getUserOverAllRankingRedisKey();
             String monthKey = RedisKeyCenter.getUserMonthRankingRedisKey(String.valueOf(HostelRankingUtils.getNowNumberMonth(System.currentTimeMillis())));
             String weekKey = RedisKeyCenter.getUserWeekRankingRedisKey(String.valueOf(HostelRankingUtils.getNowNumberWeek(System.currentTimeMillis())));
             ZSetOperations zSet = redisService.getRedisTemplate().opsForZSet();
-            zSet.incrementScore(overAllKey,userId,score);
-            zSet.incrementScore(monthKey,userId,score);
-            zSet.incrementScore(weekKey,userId,score);
-            logger.info("userId: "+userId+", 排行榜积分增加: "+score.toString()+",当前总分数为: "+zSet.score(overAllKey,userId).toString());
+            zSet.incrementScore(overAllKey, userId, score);
+            zSet.incrementScore(monthKey, userId, score);
+            zSet.incrementScore(weekKey, userId, score);
+            logger.info("userId: " + userId + ", 排行榜积分增加: " + score.toString() + ",当前总分数为: " + zSet.score(overAllKey, userId).toString());
             return true;
-        }catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
     }
 
+
+    /**
+     * 上传用户头像文件
+     * @param uploadFile
+     * @param request
+     * @return
+     * @throws Exception
+     */
+    public String uploadFiles(MultipartFile uploadFile, HttpServletRequest request) throws Exception{
+
+        // 对上传的文件重命名，避免文件重名
+        String oldName = uploadFile.getOriginalFilename();
+        String newName = UUID.randomUUID().toString() + oldName.substring(oldName.lastIndexOf("."));
+
+        if (newName.contains(";")){
+            newName = newName.substring(0, newName.lastIndexOf(";"));
+        }
+
+        //如果名称为空，返回一个文件名为空的错误
+        if (org.apache.commons.lang3.StringUtils.isEmpty(oldName)){
+            throw  new CommonException(CommonErrorCode.VALIDATE_ERROR,"上传的文件损坏，无法更新头像");
+        }
+        //如果文件超过最大值，返回超出可上传最大值的错误
+        if (uploadFile.getSize()/(1024*1024)>UPLOAD_FILE_MAX_SIZE){
+            throw  new CommonException(CommonErrorCode.VALIDATE_ERROR,"图片过大，无法上传");
+        }
+        String format = sdf.format(new Date());
+        File folder = new File(uploadPath + format);
+
+        //目录不存在则创建目录
+        if (!folder.isDirectory()) {
+            folder.mkdirs();
+        }
+        logger.info("图片地址："+newName);
+        // 文件保存
+        uploadFile.transferTo(new File(folder, newName));
+        // 返回上传文件的访问路径
+        String filePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()+ uploadPath  + format + newName;
+        logger.info("上传文件的访问路径 filePath= "+filePath);
+        return filePath;
+    }
 }

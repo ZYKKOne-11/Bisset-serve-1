@@ -91,6 +91,9 @@ public class TaskServiceImpl implements TaskService {
                 if (t.getCreateTime() == null){
                     t.setCreateTime(new Date());
                 }
+                if (t.getStatus() == null){
+                    t.setStatus(TaskStatusEnum.UN_FINISH_TASK);
+                }
                 t.setPlanId(planTaskPO.getId());
             });
             taskMapper.deleteTask(planTaskPO.getId());

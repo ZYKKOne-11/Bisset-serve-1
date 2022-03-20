@@ -31,26 +31,15 @@ public interface UserService {
      */
     UserPO login(UserVO userInfo, HttpServletRequest request, HttpServletResponse response);
 
-    /**
-     * 更改密码
-     *
-     * @param oldPassword 旧密码
-     * @return 是否成功
-     * @Param newPassword 新密码
-     */
-    Boolean changePassword(String oldPassword, String newPassword, HttpServletRequest req);
-
-    /**
-     * 更改用户邮箱
-     *
-     * @param userInfo 用户信息
-     * @return 是否成功
-     */
-    Boolean changeUserEmail(UserPO userInfo);
-
     Boolean sendEmail(String emailName);
 
     UserPO query();
 
     List<UserPO> selectUserList(List<Long> ids);
+
+    Boolean logout(HttpServletRequest request);
+
+    Boolean change(UserVO userVO, HttpServletRequest req);
+
+    Boolean uploadImg(HttpServletRequest request);
 }

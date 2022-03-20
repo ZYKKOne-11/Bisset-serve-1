@@ -4,7 +4,10 @@ import com.xjh.common.exception.CommonException;
 import com.xjh.common.model.ResultModel;
 import com.xjh.common.po.UserPO;
 import com.xjh.common.vo.UserVO;
+import com.xjh.core.interceptor.token.SecurityUtils;
 import com.xjh.core.service.user.UserService;
+import lombok.extern.flogger.Flogger;
+import org.apache.catalina.security.SecurityUtil;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -58,22 +61,34 @@ public class UserController {
         }
     }
 
-    @PostMapping("/changePassword")
-    public ResultModel<Boolean> changePassword(@RequestBody UserVO userInfo, HttpServletRequest req) {
+    @GetMapping("/logout")
+    public ResultModel<Boolean> logout(HttpServletRequest request){
         try {
-            Boolean res = userService.changePassword(userInfo.getOldPassword(), userInfo.getNewPassword(), req);
+            Boolean res = userService.logout(request);
+            SecurityUtils.remove();
             return ResultModel.success(res);
-        } catch (CommonException e) {
+        }catch (CommonException e){
             return ResultModel.fail(e);
         }
     }
 
-    @PostMapping("/change-email")
-    public ResultModel<Boolean> changeEmail(@RequestBody UserPO userInfo) {
-        try {
-            Boolean res = userService.changeUserEmail(userInfo);
+    @PostMapping("/change")
+    public ResultModel<Boolean> change(@RequestBody UserVO userVO,HttpServletRequest request){
+        try{
+            Boolean res = userService.change(userVO,request);
             return ResultModel.success(res);
-        } catch (CommonException e) {
+        }catch (CommonException e){
+            return ResultModel.fail(e);
+        }
+    }
+
+
+    @PostMapping("/uploadImg")
+    public ResultModel<Boolean> uploadImg(HttpServletRequest request){
+        try{
+            Boolean res = userService.uploadImg(request);
+            return ResultModel.success(res);
+        }catch (CommonException e){
             return ResultModel.fail(e);
         }
     }

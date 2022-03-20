@@ -22,6 +22,28 @@
         where user_id = #{userId}
     </update>
 
+    <update id="updateEmailById">
+        update user
+        set email = #{email}
+        where user_id = #{userId}
+    </update>
+
+    <update id="updateNameById">
+        update user
+        set name = #{name}
+        where user_id = #{userId}
+    </update>
+    <update id="updateImgById">
+        update user
+        set img = #{imgPath}
+        where user_id = #{userId}
+    </update>
+    <update id="updateTagById">
+        update user
+        set tag = #{tag}
+        where user_id = #{userId}
+    </update>
+
     <select id="selectUserByName" resultMap="BaseResultMap">
         select * from user where name = #{name}
     </select>

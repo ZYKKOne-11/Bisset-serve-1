@@ -12,6 +12,18 @@ mybatis:
   mapper-locations: classpath*:/mapper/*.xml
   type-aliases-package: com.xjh.common.bean  #所有的Entities别名类的包
 
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB     #单个最大文件大小，默认是1MB
+      max-request-size: 100MB   #总请求文件大小
+  resources:
+    static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/static/,classpath:/public/,file:${web.upload-path}
+
+  mvc:
+    static-path-pattern: ${web.upload-path}/**
+web:
+  upload-path: /home/admin/static
 #data:
 #  url: jdbc:mysql://101.43.25.47:3306/serve_task?useUnicode=true&characterEncoding=utf-8&useSSL=false
 #  username: root
