@@ -18,6 +18,10 @@ public class RedisKeyCenter {
         return String.format("user_token:email_time_info:%s", token);
     }
 
+    public static String getUserLoginNumberRediskey(String token) {
+        return String.format("user_token:user_login_number:%s", token);
+    }
+
     public static String getDoorOpeUserIdRedisKey(String opeToken) {
         return String.format("Door:opeUserId:%s", opeToken);
     }

@@ -1,6 +1,5 @@
 package com.xjh.core.service.user.impl;
 
-import com.xjh.common.bean.Share;
 import com.xjh.common.consts.HostelConstant;
 import com.xjh.common.enums.UserChangeReqTypeEnum;
 import com.xjh.common.exception.CommonErrorCode;
@@ -8,26 +7,22 @@ import com.xjh.common.exception.CommonException;
 import com.xjh.common.po.UserPO;
 import com.xjh.common.utils.HostelRankingUtils;
 import com.xjh.common.utils.PropertyLoader;
-import com.xjh.common.utils.security.DigestUtil;
-import com.xjh.common.vo.UserVO;
-import com.xjh.core.config.ApplicationConstant;
+import com.xjh.common.vo.UserReqVO;
+import com.xjh.common.vo.UserRespVO;
 import com.xjh.core.interceptor.token.SecurityUtils;
 import com.xjh.core.interceptor.token.TokenUtil;
 import com.xjh.core.mapper.UserMapper;
 import com.xjh.core.service.redis.RedisKeyCenter;
 import com.xjh.core.service.redis.RedisService;
 import com.xjh.core.service.user.UserService;
-import org.apache.catalina.User;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
@@ -40,7 +35,6 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
@@ -67,10 +61,11 @@ public class UserServiceImpl implements UserService {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
-    public Boolean register(UserVO userInfo) {
+    public Boolean register(UserReqVO userInfo) {
         try {
             UserPO userPO = userInfo.getUser();
             checkEmailCode(userInfo);
+            userPO.setImg("http://101.43.25.47/user/img/default/003.JPG");
             userPO.setPassword(Base64.encodeBase64String(userPO.getPassword().getBytes()));
             userMapper.insertUser(userPO);
             userExecAddScore(String.valueOf(userPO.getUserId()), HostelConstant.USER_REGISTER_SCORE);
@@ -82,19 +77,19 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Boolean checkRegisterParam(UserVO userVO) {
+    public Boolean checkRegisterParam(UserReqVO userReqVO) {
         try {
-            if (userVO.getUser().getEmail() != null && !userVO.getUser().getEmail().equals("")) {
-                Integer count = userMapper.selectAccountCountByEmail(userVO.getUser().getEmail());
+            if (userReqVO.getUser().getEmail() != null && !userReqVO.getUser().getEmail().equals("")) {
+                Integer count = userMapper.selectAccountCountByEmail(userReqVO.getUser().getEmail());
                 if (count > 0) {
-                    logger.debug(DFLAG_USER_LOG + ",登录参数校验，邮箱已存在，email: " + userVO.getEmail());
+                    logger.debug(DFLAG_USER_LOG + ",登录参数校验，邮箱已存在，email: " + userReqVO.getEmail());
                     return false;
                 }
             }
-            if (userVO.getUser().getName() != null && !userVO.getUser().getName().equals("")) {
-                Integer count = userMapper.selectAccountCountByName(userVO.getUser().getName());
+            if (userReqVO.getUser().getName() != null && !userReqVO.getUser().getName().equals("")) {
+                Integer count = userMapper.selectAccountCountByName(userReqVO.getUser().getName());
                 if (count > 0) {
-                    logger.debug(DFLAG_USER_LOG + ",登录参数校验，用户昵称已存在，name: " + userVO.getUser().getName());
+                    logger.debug(DFLAG_USER_LOG + ",登录参数校验，用户昵称已存在，name: " + userReqVO.getUser().getName());
                     return false;
                 }
             }
@@ -107,7 +102,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserPO login(UserVO userInfo, HttpServletRequest request, HttpServletResponse response) {
+    public UserPO login(UserReqVO userInfo, HttpServletRequest request, HttpServletResponse response) {
         UserPO userPO = null;
         String account = userInfo.getAccount();
         //邮箱登录
@@ -125,6 +120,7 @@ public class UserServiceImpl implements UserService {
         }
         String token = TokenUtil.generateToken(userPO.getUserId(), request, response);
         SecurityUtils.setUserInfo(token, userPO, redisService);
+        redisService.incrementKey(RedisKeyCenter.getUserLoginNumberRediskey(String.valueOf(userPO.getUserId())));
         userExecAddScore(String.valueOf(userPO.getUserId()), HostelConstant.USER_REGISTER_SCORE);
         return userPO;
     }
@@ -146,36 +142,36 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Boolean change(UserVO userVO, HttpServletRequest req) {
+    public Boolean change(UserReqVO userReqVO, HttpServletRequest req) {
         try{
             UserPO user = SecurityUtils.getUserInfo();
-            userVO.setUser(user);
-            checkChangeParam(userVO);
-            switch (userVO.getReqType()){
+            userReqVO.setUser(user);
+            checkChangeParam(userReqVO);
+            switch (userReqVO.getReqType()){
                 case CHANGE_USER_NAME:
-                    changeUserName(userVO,req);
+                    changeUserName(userReqVO,req);
                     break;
                 case CHANGE_USER_PASSWORD:
-                    changePassword(userVO,req);
+                    changePassword(userReqVO,req);
                     break;
                 case CHANGE_USER_EMAIL:
-                    changeUserEmail(userVO,req);
+                    changeUserEmail(userReqVO,req);
                     break;
                 case CHANGE_USER_TAG:
-                    changeUserTag(userVO,req);
+                    changeUserTag(userReqVO,req);
                     break;
                 default:
                     return false;
             }
             return true;
         }catch (Exception e){
-            logger.error("修改用户信息失败，userVo="+userVO.toString());
-            throw new CommonException(CommonErrorCode.SERVER_POWER_LESS,"修改失败，操作类型为："+userVO.getReqType().getDesc());
+            logger.error("修改用户信息失败，userVo="+ userReqVO.toString());
+            throw new CommonException(CommonErrorCode.SERVER_POWER_LESS,"修改失败，操作类型为："+ userReqVO.getReqType().getDesc());
         }
     }
 
     @Override
-    public Boolean uploadImg(HttpServletRequest request) {
+    public String uploadImg(HttpServletRequest request) {
         try {
             MultipartHttpServletRequest multipartHttpServletRequest=(MultipartHttpServletRequest)(request);
             MultipartFile uploadFile=multipartHttpServletRequest.getFile("img");
@@ -186,12 +182,37 @@ public class UserServiceImpl implements UserService {
             UserPO user = SecurityUtils.getUserInfo();
             user.setImg(uploadFilePath);
             userMapper.updateImgById(user.getUserId(),uploadFilePath);
-            String token = TokenUtil.getToken(request);
-            String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
-            redisService.set(userLoginInfoRedisKey, user, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
-            return true;
+            flushUserCache(user,request);
+            return uploadFilePath;
         }catch (Exception e){
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"上传用户头像失败，请稍后重试");
+        }
+    }
+
+    @Override
+    public Boolean update(UserReqVO userReqVO, HttpServletRequest request) {
+        try {
+            UserPO user = userReqVO.getUser();
+            if (user == null){
+                throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"参数不能为空");
+            }
+            UserPO info = SecurityUtils.getUserInfo();
+            if (userReqVO.getTag() == null || userReqVO.getTag().size() == 0){
+                user.setTag(info.getTag());
+            }else {
+                user.setTag(userReqVO.getTag().toString());
+            }
+            if (user.getSign() == null && user.getSign().equals("")){
+                user.setSign(info.getSign());
+            }
+            user.setUserId(info.getUserId());
+            userMapper.updateTagAndSign(user);
+            info.setTag(user.getTag());
+            info.setSign(user.getSign());
+            flushUserCache(info,request);
+            return true;
+        }catch (Exception e){
+            throw new CommonException(CommonErrorCode.UNKNOWN_ERROR,"修改标签和签名失败，请稍后重试");
         }
     }
 
@@ -238,10 +259,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserPO query() {
+    public UserRespVO query() {
         try {
+            UserRespVO res = new UserRespVO();
             UserPO userInfo = SecurityUtils.getUserInfo();
-            return userInfo;
+            res.setUserId(userInfo.getUserId());
+            res.setName(userInfo.getName());
+            res.setEmail(userInfo.getEmail());
+            res.setImg(userInfo.getImg());
+            res.setTag(userInfo.getTag());
+            res.setSign(userInfo.getSign());
+            Integer loginNumber = redisService.get(RedisKeyCenter.getUserLoginNumberRediskey(String.valueOf(userInfo.getUserId())),Integer.class);
+            loginNumber = loginNumber == null? 0 : loginNumber;
+            res.setLoginNumber(loginNumber);
+            res.setPlanNumber(userMapper.selectPlanCountById(res.getUserId()));
+            res.setShareNumber(userMapper.selectShareCountById(res.getUserId()));
+            return res;
         } catch (Exception e) {
             throw new CommonException(CommonErrorCode.UNKNOWN_ERROR, "用户缓存信息失效，请重新登录");
         }
@@ -259,37 +292,37 @@ public class UserServiceImpl implements UserService {
 
     /**
      * 用户修改操作入参合法性校验
-     * @param userVO
+     * @param userReqVO
      */
-    private void checkChangeParam(UserVO userVO){
-        if (userVO.getReqType() == null){
-            userVO.setReqType(UserChangeReqTypeEnum.CHANGE_USER_UNSAFE);
+    private void checkChangeParam(UserReqVO userReqVO){
+        if (userReqVO.getReqType() == null){
+            userReqVO.setReqType(UserChangeReqTypeEnum.CHANGE_USER_UNSAFE);
             throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"入参操作类型不可为空");
         }
-        switch (userVO.getReqType()){
+        switch (userReqVO.getReqType()){
             case CHANGE_USER_NAME:
-                Integer nameCount = userMapper.selectAccountCountByName(userVO.getNewName());
+                Integer nameCount = userMapper.selectAccountCountByName(userReqVO.getNewName());
                 if (nameCount == null || nameCount != 0){
                     throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"您修改的名称已存在");
                 }
                 break;
             case CHANGE_USER_PASSWORD:
-                checkEmailCode(userVO);
-                String originPassword = userVO.getUser().getPassword();
+                checkEmailCode(userReqVO);
+                String originPassword = userReqVO.getUser().getPassword();
                 String decodePassword = StringUtils.newStringUsAscii(Base64.decodeBase64(originPassword));
-                if (!decodePassword.equals(userVO.getOldPassword())) {
+                if (!decodePassword.equals(userReqVO.getOldPassword())) {
                     throw new CommonException(CommonErrorCode.VALIDATE_ERROR, "旧密码不正确，请重新输入");
                 }
                 break;
             case CHANGE_USER_EMAIL:
-                userVO.getUser().setEmail(userVO.getNewEmail());
-                checkEmailCode(userVO);
-                Integer emailCount = userMapper.selectAccountCountByEmail(userVO.getEmail());
+                userReqVO.getUser().setEmail(userReqVO.getNewEmail());
+                checkEmailCode(userReqVO);
+                Integer emailCount = userMapper.selectAccountCountByEmail(userReqVO.getEmail());
                 if (emailCount == null || emailCount != 0){
                     throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"您修改的邮箱已存在");
                 }
 
-                if (!isEmail(userVO.getNewEmail())){
+                if (!isEmail(userReqVO.getNewEmail())){
                     throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"新的邮箱格式不合法");
                 }
                 break;
@@ -297,48 +330,40 @@ public class UserServiceImpl implements UserService {
                 throw new CommonException(CommonErrorCode.VALIDATE_ERROR,"数据参数校验异常");
         }
     }
-    private Boolean changePassword(UserVO userVO, HttpServletRequest req) {
-        UserPO userInfo = userVO.getUser();
+    private Boolean changePassword(UserReqVO userReqVO, HttpServletRequest req) {
+        UserPO userInfo = userReqVO.getUser();
         Long userId = SecurityUtils.getUserId();
-        String newPassword = Base64.encodeBase64String(userVO.getNewPassword().getBytes());
+        String newPassword = Base64.encodeBase64String(userReqVO.getNewPassword().getBytes());
         userInfo.setPassword(newPassword);
         userMapper.updatePasswordById(userId, newPassword);
-        String token = TokenUtil.getToken(req);
-        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
-        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        flushUserCache(userInfo,req);
         return true;
     }
 
-    private Boolean changeUserEmail(UserVO userVO, HttpServletRequest req) {
-        UserPO userInfo = userVO.getUser();
+    private Boolean changeUserEmail(UserReqVO userReqVO, HttpServletRequest req) {
+        UserPO userInfo = userReqVO.getUser();
         Long userId = SecurityUtils.getUserId();
-        userInfo.setEmail(userVO.getNewEmail());
-        userMapper.updateEmailById(userId, userVO.getNewEmail());
-        String token = TokenUtil.getToken(req);
-        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
-        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        userInfo.setEmail(userReqVO.getNewEmail());
+        userMapper.updateEmailById(userId, userReqVO.getNewEmail());
+        flushUserCache(userInfo,req);
         return true;
     }
 
-    private Boolean changeUserName(UserVO userVO, HttpServletRequest req){
-        UserPO userInfo = userVO.getUser();
+    private Boolean changeUserName(UserReqVO userReqVO, HttpServletRequest req){
+        UserPO userInfo = userReqVO.getUser();
         Long userId = SecurityUtils.getUserId();
-        userInfo.setName(userVO.getNewName());
-        userMapper.updateNameById(userId, userVO.getNewName());
-        String token = TokenUtil.getToken(req);
-        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
-        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        userInfo.setName(userReqVO.getNewName());
+        userMapper.updateNameById(userId, userReqVO.getNewName());
+        flushUserCache(userInfo,req);
         return true;
     }
 
-    private Boolean changeUserTag(UserVO userVO,HttpServletRequest req){
-        UserPO userInfo = userVO.getUser();
+    private Boolean changeUserTag(UserReqVO userReqVO, HttpServletRequest req){
+        UserPO userInfo = userReqVO.getUser();
         Long userId = SecurityUtils.getUserId();
-        userInfo.setTag(userVO.getTag().toString());
-        userMapper.updateTagById(userId, userVO.getTag().toString());
-        String token = TokenUtil.getToken(req);
-        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
-        redisService.set(userLoginInfoRedisKey, userInfo, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
+        userInfo.setTag(userReqVO.getTag().toString());
+        userMapper.updateTagById(userId, userReqVO.getTag().toString());
+        flushUserCache(userInfo,req);
         return true;
     }
     private String verifyCode(int n) {
@@ -357,7 +382,7 @@ public class UserServiceImpl implements UserService {
         return userEmailInfoRedisKey;
     }
 
-    private void checkEmailCode(UserVO userInfo){
+    private void checkEmailCode(UserReqVO userInfo){
         String token = Base64.encodeBase64String(userInfo.getUser().getEmail().getBytes());
         String emailRedisKey = RedisKeyCenter.getUserEmailInfoRedisKey(token);
         String emailCode = redisService.get(emailRedisKey);
@@ -453,5 +478,16 @@ public class UserServiceImpl implements UserService {
         String filePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()+ uploadPath  + format + newName;
         logger.info("上传文件的访问路径 filePath= "+filePath);
         return filePath;
+    }
+
+    /**
+     * 刷新用户缓存信息
+     * @param user
+     * @param request
+     */
+    private void flushUserCache(UserPO user, HttpServletRequest request){
+        String token = TokenUtil.getToken(request);
+        String userLoginInfoRedisKey = RedisKeyCenter.getUserLoginInfoRedisKey(token);
+        redisService.set(userLoginInfoRedisKey, user, (long) SecurityUtils.TOKEN_TTL_TIME, TimeUnit.SECONDS);
     }
 }

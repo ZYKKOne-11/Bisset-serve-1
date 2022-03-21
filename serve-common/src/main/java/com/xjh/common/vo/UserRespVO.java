@@ -1,9 +1,10 @@
-package com.xjh.common.po;
+package com.xjh.common.vo;
 
 import lombok.Data;
 
 @Data
-public class UserPO {
+public class UserRespVO {
+    /*User 表字段*/
     private Long userId;
     private String name;
     private String password;
@@ -11,4 +12,9 @@ public class UserPO {
     private String img;
     private String tag;
     private String sign;
+
+    /*展示字段*/
+    private Integer planNumber;
+    private Integer shareNumber;
+    private Integer loginNumber;
 }

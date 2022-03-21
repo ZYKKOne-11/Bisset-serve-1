@@ -7,7 +7,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class UserVO {
+public class UserReqVO {
     private String account;
     private UserPO user;
     private String code;

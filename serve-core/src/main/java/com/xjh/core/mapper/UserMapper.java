@@ -31,4 +31,10 @@ public interface UserMapper {
 
 
     List<UserPO> selectUserList(List<Long> ids);
+
+    void updateTagAndSign(UserPO user);
+
+    Integer selectPlanCountById(@Param("userId") Long userId);
+
+    Integer selectShareCountById(@Param("userId") Long userId);
 }

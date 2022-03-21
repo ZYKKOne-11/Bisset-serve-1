@@ -1,8 +1,8 @@
 package com.xjh.core.service.user;
 
 import com.xjh.common.po.UserPO;
-import com.xjh.common.vo.UserVO;
-import org.apache.catalina.User;
+import com.xjh.common.vo.UserReqVO;
+import com.xjh.common.vo.UserRespVO;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -15,31 +15,33 @@ public interface UserService {
      * @param userInfo 注册信息
      * @return 是否成功
      */
-    Boolean register(UserVO userInfo);
+    Boolean register(UserReqVO userInfo);
 
     /**
      * 注册参数合理性校验
-     * @param userVO email name 校验
+     * @param userReqVO email name 校验
      * @return
      */
-    Boolean checkRegisterParam(UserVO userVO);
+    Boolean checkRegisterParam(UserReqVO userReqVO);
     /**
      * 登录
      *
      * @param userInfo 登录信息
      * @return 令牌
      */
-    UserPO login(UserVO userInfo, HttpServletRequest request, HttpServletResponse response);
+    UserPO login(UserReqVO userInfo, HttpServletRequest request, HttpServletResponse response);
 
     Boolean sendEmail(String emailName);
 
-    UserPO query();
+    UserRespVO query();
 
     List<UserPO> selectUserList(List<Long> ids);
 
     Boolean logout(HttpServletRequest request);
 
-    Boolean change(UserVO userVO, HttpServletRequest req);
+    Boolean change(UserReqVO userReqVO, HttpServletRequest req);
 
-    Boolean uploadImg(HttpServletRequest request);
+    String uploadImg(HttpServletRequest request);
+
+    Boolean update(UserReqVO user, HttpServletRequest request);
 }
